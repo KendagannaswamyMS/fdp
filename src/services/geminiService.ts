@@ -1648,5 +1648,9 @@ export async function generateWithGemini(options: GeminiGenerateOptions): Promis
     return generateInstitutionalSimulation(offlineSource, promptNum);
   }
 
-  throw lastError || new Error('All Gemini models failed to generate a response.');
+  throw new Error(
+    `Gemini returned no draft after trying ${modelsToTry.length} model(s).` +
+    (lastError ? ` Last error: ${lastError.message}` : '') +
+    ' Check the API key, its quota and the network connection.'
+  );
 }

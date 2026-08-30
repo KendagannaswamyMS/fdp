@@ -101,13 +101,19 @@ ${generatedText}`;
 
       const enhanced = await generateWithGemini({
         apiKey,
-        prompt
+        prompt,
+        // Never fall back to the offline document generator here: this action
+        // refines an existing draft, and a synthesised circular would duplicate
+        // the draft inside itself.
+        allowOfflineFallback: false
       });
 
       setCustomDraft(enhanced);
       soundFx.playSuccess();
     } catch (err: any) {
-      setEnhanceError(err.message || 'Failed to enhance template with Gemini AI.');
+      setEnhanceError(
+        `${err.message || 'Failed to enhance template with Gemini AI.'} Your draft is unchanged.`
+      );
       soundFx.playLabAlert();
     } finally {
       setIsEnhancing(false);

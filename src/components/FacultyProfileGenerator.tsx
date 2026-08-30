@@ -192,7 +192,7 @@ ${responsibilities.map(r => '- ' + r.text).join('\n')}
 Publications:
 ${publications.map(p => '- ' + p.text).join('\n')}`;
 
-      const aiResult = await generateWithGemini({ prompt });
+      const aiResult = await generateWithGemini({ prompt, allowOfflineFallback: false });
       if (aiResult) {
         alert('Faculty Profile successfully audited and verified against AICTE / NBA Criterion 5 guidelines!');
       }
