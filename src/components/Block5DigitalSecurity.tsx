@@ -62,7 +62,7 @@ export const Block5DigitalSecurity: React.FC<Block5DigitalSecurityProps> = ({ ap
 
   // Gemini API Key State
   const [apiKey, setApiKey] = useState(getStoredApiKey());
-  const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
   const [isKeySaved, setIsKeySaved] = useState(!!getStoredApiKey());
   
   // Real-time AI execution
@@ -482,10 +482,10 @@ ${customInput}`;
                   onChange={(e) => setSelectedModel(e.target.value)}
                   className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none font-mono"
                 >
-                  <option value="gemini-1.5-flash">gemini-1.5-flash (Recommended / 100% Free Tier)</option>
+                  <option value="gemini-2.5-flash">gemini-2.5-flash (Recommended / Free Tier)</option>
                   <option value="gemini-2.0-flash">gemini-2.0-flash (High Speed Free Tier)</option>
-                  <option value="gemini-2.5-flash">gemini-2.5-flash (Next Gen Free Tier)</option>
-                  <option value="gemini-1.5-pro">gemini-1.5-pro (Deep Reasoning Free Tier)</option>
+                  <option value="gemini-2.5-pro">gemini-2.5-pro (Deep Reasoning Free Tier)</option>
+                  <option value="gemini-1.5-flash">gemini-1.5-flash (Legacy Free Tier)</option>
                 </select>
               </div>
 

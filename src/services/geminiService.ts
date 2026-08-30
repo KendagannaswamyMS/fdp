@@ -36,13 +36,59 @@ export interface GeminiGenerateOptions {
   rawInput?: string;
 }
 
+// Last-resort names to try if live model discovery itself fails (e.g. the
+// key has no ListModels access, or the network is unreachable). Google
+// renames and retires model IDs over time - gemini-1.5-pro was removed from
+// v1beta after this list was first written - so this is deliberately not
+// the primary source of truth; discoverAvailableModels() below is.
 const CANDIDATE_MODELS = [
-  'gemini-1.5-flash',
-  'gemini-2.0-flash',
   'gemini-2.5-flash',
-  'gemini-1.5-flash-8b',
-  'gemini-1.5-pro'
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-2.5-pro',
+  'gemini-1.5-flash-8b'
 ];
+
+interface ModelCacheEntry {
+  models: string[];
+  fetchedAt: number;
+}
+
+const modelListCache = new Map<string, ModelCacheEntry>();
+const MODEL_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes - long enough to avoid refetching every keystroke, short enough to notice a key change within a session.
+
+/**
+ * Asks the key itself which models it can actually call right now, instead
+ * of trusting a hard-coded list that Google can (and does) change without
+ * notice. Falls back to CANDIDATE_MODELS if discovery is unavailable.
+ */
+export async function discoverAvailableModels(apiKey: string): Promise<string[]> {
+  const cached = modelListCache.get(apiKey);
+  if (cached && Date.now() - cached.fetchedAt < MODEL_CACHE_TTL_MS) {
+    return cached.models;
+  }
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}&pageSize=200`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`ListModels HTTP ${response.status}`);
+
+    const data = await response.json();
+    const models: string[] = (data?.models || [])
+      .filter((m: any) => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map((m: any) => String(m.name || '').replace(/^models\//, ''))
+      .filter(Boolean);
+
+    if (models.length > 0) {
+      modelListCache.set(apiKey, { models, fetchedAt: Date.now() });
+      return models;
+    }
+  } catch (err) {
+    console.warn('Gemini model discovery failed, falling back to the static candidate list.', err);
+  }
+
+  return CANDIDATE_MODELS;
+}
 
 /**
  * The studio sends Gemini a composed prompt (system instructions + template +
@@ -1596,12 +1642,17 @@ export async function generateWithGemini(options: GeminiGenerateOptions): Promis
   }
 
   const promptText = options.prompt;
-  const requestedModel = options.model || 'gemini-1.5-flash';
+  const requestedModel = options.model || 'gemini-2.5-flash';
 
-  const modelsToTry = [
-    requestedModel,
-    ...CANDIDATE_MODELS.filter(m => m !== requestedModel)
-  ];
+  // Ask the key what actually works right now rather than trusting a
+  // hard-coded model name, which Google can retire without notice.
+  const liveModels = await discoverAvailableModels(apiKey);
+  const known = new Set(liveModels);
+  const orderedLive = known.has(requestedModel)
+    ? [requestedModel, ...liveModels.filter(m => m !== requestedModel)]
+    : [...liveModels, requestedModel];
+  // De-duplicate while preserving order.
+  const modelsToTry = [...new Set(orderedLive)];
 
   let lastError: Error | null = null;
 
@@ -1649,7 +1700,8 @@ export async function generateWithGemini(options: GeminiGenerateOptions): Promis
   }
 
   throw new Error(
-    `Gemini returned no draft after trying ${modelsToTry.length} model(s).` +
+    `Gemini returned no draft after trying ${modelsToTry.length} model(s) ` +
+    `(${modelsToTry.slice(0, 4).join(', ')}${modelsToTry.length > 4 ? ', ...' : ''}).` +
     (lastError ? ` Last error: ${lastError.message}` : '') +
     ' Check the API key, its quota and the network connection.'
   );
