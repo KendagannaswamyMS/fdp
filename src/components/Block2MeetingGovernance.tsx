@@ -184,7 +184,7 @@ Audio File: ${uploadedAudioName || 'Institutional BoS Recording'}`;
         const result = await generateWithGemini({
           apiKey,
           prompt,
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.6-flash',
           allowOfflineFallback: false
         });
         setAudioTranscript(result);

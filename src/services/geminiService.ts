@@ -28,12 +28,13 @@ export interface GeminiGenerateOptions {
   apiKey?: string;
   prompt: string;
   promptNumber?: number;
-  systemInstruction?: string;
   model?: string;
   temperature?: number;
   allowOfflineFallback?: boolean;
   /** Raw user data without the composed prompt, used by the offline generator. */
   rawInput?: string;
+  /** Additional instruction appended after the default output-discipline policy below. */
+  systemInstruction?: string;
 }
 
 // Last-resort names to try if live model discovery itself fails (e.g. the
@@ -41,12 +42,30 @@ export interface GeminiGenerateOptions {
 // renames and retires model IDs over time - gemini-1.5-pro was removed from
 // v1beta after this list was first written - so this is deliberately not
 // the primary source of truth; discoverAvailableModels() below is.
+/**
+ * Sent as Gemini's dedicated systemInstruction on every call, so the model
+ * returns a finished, ready-to-print document instead of its planning
+ * notes, draft-vs-revised comparisons, or a checklist of what it changed.
+ * A caller's own systemInstruction (if any) is appended after this, never
+ * instead of it.
+ */
+const OUTPUT_DISCIPLINE_INSTRUCTION = [
+  'You are drafting a finished institutional document that will be printed exactly as returned - not a conversation about how to draft it.',
+  'Output ONLY the final document text, formatted as it should appear on letterhead, starting with the first line of the document and ending with the signature/distribution block.',
+  'Do not include planning notes, an outline of your approach, alternative phrasings, before/after comparisons (e.g. "Better:"), a checklist of requirements you satisfied, or any other commentary about the document.',
+  'Do not use markdown emphasis (asterisks, headers) for meta-commentary; only use the plain formatting the document itself requires.',
+  'Where a fact is not supplied, insert a {{PLACEHOLDER}} in the document itself rather than asking a question or noting the gap separately.'
+].join(' ');
+
+// gemini-2.0-flash and gemini-2.0-flash-lite were shut down 01-06-2026 - do not
+// re-add them here even as a last-resort fallback; every request would 404.
 const CANDIDATE_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3.7-flash',
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
   'gemini-2.5-pro',
-  'gemini-1.5-flash-8b'
+  'gemini-1.5-flash'
 ];
 
 interface ModelCacheEntry {
@@ -60,28 +79,43 @@ const MODEL_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes - long enough to avoid 
 /**
  * Asks the key itself which models it can actually call right now, instead
  * of trusting a hard-coded list that Google can (and does) change without
- * notice. Falls back to CANDIDATE_MODELS if discovery is unavailable.
+ * notice. Filters for modern generative text models and sorts by preference.
+ * Falls back to CANDIDATE_MODELS if discovery is unavailable.
  */
 export async function discoverAvailableModels(apiKey: string): Promise<string[]> {
-  const cached = modelListCache.get(apiKey);
+  const trimmedKey = (apiKey || '').trim();
+  if (!trimmedKey) return CANDIDATE_MODELS;
+
+  const cached = modelListCache.get(trimmedKey);
   if (cached && Date.now() - cached.fetchedAt < MODEL_CACHE_TTL_MS) {
     return cached.models;
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}&pageSize=200`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${trimmedKey}&pageSize=200`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`ListModels HTTP ${response.status}`);
 
     const data = await response.json();
-    const models: string[] = (data?.models || [])
+    const rawModels: string[] = (data?.models || [])
       .filter((m: any) => (m.supportedGenerationMethods || []).includes('generateContent'))
       .map((m: any) => String(m.name || '').replace(/^models\//, ''))
       .filter(Boolean);
 
-    if (models.length > 0) {
-      modelListCache.set(apiKey, { models, fetchedAt: Date.now() });
-      return models;
+    // Filter to modern text-generation Gemini models
+    const filtered = rawModels.filter(m =>
+      m.startsWith('gemini-') &&
+      !m.includes('vision') &&
+      !m.includes('1.0') &&
+      m !== 'gemini-pro'
+    );
+
+    // Sort by version descending so newest Gemini models (gemini-3.x, 2.x) are tried first
+    filtered.sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }));
+
+    if (filtered.length > 0) {
+      modelListCache.set(trimmedKey, { models: filtered, fetchedAt: Date.now() });
+      return filtered;
     }
   } catch (err) {
     console.warn('Gemini model discovery failed, falling back to the static candidate list.', err);
@@ -1632,7 +1666,7 @@ AUDIT VERDICT: ${verdict}
 }
 
 export async function generateWithGemini(options: GeminiGenerateOptions): Promise<string> {
-  const apiKey = options.apiKey || getStoredApiKey();
+  const apiKey = (options.apiKey || getStoredApiKey() || '').trim();
   const promptNum = options.promptNumber || 1;
   
   const offlineSource = options.rawInput || options.prompt;
@@ -1642,24 +1676,32 @@ export async function generateWithGemini(options: GeminiGenerateOptions): Promis
   }
 
   const promptText = options.prompt;
-  const requestedModel = options.model || 'gemini-2.5-flash';
+  const requestedModel = options.model || 'gemini-3.6-flash';
 
-  // Ask the key what actually works right now rather than trusting a
-  // hard-coded model name, which Google can retire without notice.
+  // Discover live models for the API key to always match the active model registry
   const liveModels = await discoverAvailableModels(apiKey);
   const known = new Set(liveModels);
+
   const orderedLive = known.has(requestedModel)
     ? [requestedModel, ...liveModels.filter(m => m !== requestedModel)]
-    : [...liveModels, requestedModel];
-  // De-duplicate while preserving order.
-  const modelsToTry = [...new Set(orderedLive)];
+    : [...CANDIDATE_MODELS.filter(m => known.has(m)), ...liveModels, requestedModel];
 
+  const modelsToTry = [...new Set(orderedLive)].slice(0, 5);
+
+  let firstError: Error | null = null;
   let lastError: Error | null = null;
 
   for (const model of modelsToTry) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const combinedSystemInstruction = options.systemInstruction
+        ? `${OUTPUT_DISCIPLINE_INSTRUCTION} ${options.systemInstruction}`
+        : OUTPUT_DISCIPLINE_INSTRUCTION;
+
       const payload = {
+        systemInstruction: {
+          parts: [{ text: combinedSystemInstruction }]
+        },
         contents: [
           {
             role: 'user',
@@ -1668,29 +1710,73 @@ export async function generateWithGemini(options: GeminiGenerateOptions): Promis
         ],
         generationConfig: {
           temperature: options.temperature ?? 0.2,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
         }
       };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
 
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      }).finally(() => clearTimeout(timeoutId));
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.error?.message || `HTTP ${response.status} from ${model}`);
+        const rawMessage = errorData?.error?.message || `HTTP ${response.status} from ${model}`;
+        const lowerMsg = rawMessage.toLowerCase();
+
+        // If the error is fatal for all models (invalid key, quota exhausted, region blocked),
+        // fail immediately with a clear explanation instead of trying other models.
+        if (response.status === 400 && (lowerMsg.includes('api key') || lowerMsg.includes('api_key'))) {
+          throw new Error(`Invalid Gemini API Key: ${rawMessage}`);
+        }
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(`Gemini Authentication Error (${response.status}): ${rawMessage}`);
+        }
+        if (response.status === 429 || lowerMsg.includes('quota') || lowerMsg.includes('rate limit')) {
+          throw new Error(`Gemini API Quota Exceeded (429): ${rawMessage}`);
+        }
+
+        throw new Error(rawMessage);
       }
 
       const data = await response.json();
-      const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const candidate = data?.candidates?.[0];
+      const generatedText = candidate?.content?.parts
+        ?.map((p: any) => p.text)
+        .filter(Boolean)
+        .join('\n');
 
       if (generatedText) {
         return generatedText;
       }
+
+      if (data?.promptFeedback?.blockReason) {
+        throw new Error(`Gemini blocked prompt: ${data.promptFeedback.blockReason}`);
+      }
+
+      const finishReason = candidate?.finishReason;
+      if (finishReason && finishReason !== 'STOP') {
+        throw new Error(`Generation ended with reason: ${finishReason}`);
+      }
     } catch (err: any) {
+      if (!firstError) firstError = err;
       lastError = err;
+
+      // Re-throw fatal auth/quota errors immediately
+      const errMsg = err?.message || '';
+      if (
+        errMsg.includes('Invalid Gemini API Key') ||
+        errMsg.includes('Gemini Authentication Error') ||
+        errMsg.includes('Gemini API Quota Exceeded')
+      ) {
+        throw err;
+      }
+
       console.warn(`Model ${model} failed, trying next candidate...`, err);
     }
   }
@@ -1699,10 +1785,11 @@ export async function generateWithGemini(options: GeminiGenerateOptions): Promis
     return generateInstitutionalSimulation(offlineSource, promptNum);
   }
 
+  const primaryError = firstError || lastError;
   throw new Error(
     `Gemini returned no draft after trying ${modelsToTry.length} model(s) ` +
     `(${modelsToTry.slice(0, 4).join(', ')}${modelsToTry.length > 4 ? ', ...' : ''}).` +
-    (lastError ? ` Last error: ${lastError.message}` : '') +
+    (primaryError ? ` Error: ${primaryError.message}` : '') +
     ' Check the API key, its quota and the network connection.'
   );
 }
