@@ -17,7 +17,8 @@ import {
   Sparkle,
   UserCheck,
   Sun,
-  Moon
+  Moon,
+  ExternalLink
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -172,6 +173,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             );
           })}
+
+          {/* PDF Toolkit — standalone client-side pages, not an app tab */}
+          <a
+            href="pdf-tools/index.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Merge, organise, compress, export as images, sign and stamp PDFs — opens in a new tab"
+            className="flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
+          >
+            <FileText className="w-4 h-4 text-slate-500" />
+            <span>PDF Toolkit</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-slate-800/60 text-slate-500">
+              4 Tools
+            </span>
+            <ExternalLink className="w-3 h-3 text-slate-600" />
+          </a>
         </nav>
       </div>
     </header>
