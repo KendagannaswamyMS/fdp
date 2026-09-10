@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Merger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+  :root {
+    --paper: #f3eee2;
+    --paper-2: #ece5d4;
+    --ink: #1c1a16;
+    --ink-soft: #5a544a;
+    --line: #d4cbb6;
+    --accent: #bf4123;
+    --accent-deep: #9a3219;
+    --ok: #3a6b4f;
+    --shadow: rgba(28, 26, 22, 0.12);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(191,65,35,0.05), transparent 40%),
+      radial-gradient(circle at 88% 82%, rgba(58,107,79,0.05), transparent 42%);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 48px 24px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+
+  header { margin-bottom: 40px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--accent); }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(40px, 7vw, 64px);
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+  }
+  h1 em { font-style: italic; color: var(--accent); }
+  .sub { margin-top: 16px; color: var(--ink-soft); font-size: 16px; max-width: 46ch; }
+
+  .drop {
+    margin-top: 36px;
+    border: 1.5px dashed var(--line);
+    border-radius: 4px;
+    background: rgba(255,255,255,0.35);
+    padding: 48px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s ease;
+  }
+  .drop:hover, .drop.over {
+    border-color: var(--accent);
+    background: rgba(191,65,35,0.05);
+    transform: translateY(-1px);
+  }
+  .drop.over { box-shadow: 0 12px 30px -12px var(--shadow); }
+  .drop-ic {
+    font-family: 'Fraunces', serif;
+    font-size: 38px; color: var(--accent); margin-bottom: 8px;
+  }
+  .drop-main { font-weight: 600; font-size: 17px; }
+  .drop-main span { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .drop-sub { color: var(--ink-soft); font-size: 13px; margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.03em; }
+
+  .list { margin-top: 28px; display: flex; flex-direction: column; gap: 10px; }
+  .item {
+    display: flex; align-items: center; gap: 14px;
+    background: #fffdf7;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 0 var(--shadow);
+    transition: box-shadow .15s, transform .15s, opacity .15s;
+  }
+  .item.dragging { opacity: .4; }
+  .item.drop-target { box-shadow: 0 0 0 2px var(--accent); }
+  .grip { cursor: grab; color: var(--ink-soft); font-size: 18px; line-height: 1; user-select: none; flex-shrink: 0; }
+  .grip:active { cursor: grabbing; }
+  .num {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    width: 26px; height: 26px; flex-shrink: 0;
+    display: grid; place-items: center;
+    background: var(--paper-2); border-radius: 50%; color: var(--ink-soft);
+  }
+  .meta { flex: 1; min-width: 0; }
+  .name { font-weight: 500; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .info { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .controls { display: flex; gap: 4px; flex-shrink: 0; }
+  .ic-btn {
+    width: 30px; height: 30px; border: 1px solid var(--line);
+    background: var(--paper); border-radius: 4px; cursor: pointer;
+    color: var(--ink-soft); font-size: 14px; display: grid; place-items: center; transition: all .15s;
+  }
+  .ic-btn:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); }
+  .ic-btn:disabled { opacity: .3; cursor: default; }
+  .ic-btn.del:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Options panel */
+  .panel {
+    margin-top: 30px; border: 1px solid var(--line); border-radius: 6px;
+    background: rgba(255,253,247,0.6); overflow: hidden;
+  }
+  .panel + .panel { margin-top: 16px; }
+  .panel-head {
+    display: flex; align-items: center; gap: 12px; padding: 16px 18px;
+    cursor: pointer; user-select: none;
+  }
+  .panel-title {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 19px; flex: 1;
+  }
+  .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; background: var(--line); border-radius: 24px;
+    transition: .2s; cursor: pointer;
+  }
+  .slider::before {
+    content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px;
+    background: #fff; border-radius: 50%; transition: .2s;
+  }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(20px); }
+
+  .panel-body { padding: 0 18px 20px; display: none; }
+  .panel.open .panel-body { display: block; }
+  .field { margin-top: 16px; }
+  .field-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; display: block;
+  }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; flex-wrap: wrap; }
+  .seg button {
+    border: none; background: transparent; padding: 8px 14px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink-soft);
+    border-right: 1px solid var(--line); transition: all .15s;
+  }
+  .seg button:last-child { border-right: none; }
+  .seg button.active { background: var(--accent); color: #fff; }
+  .row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; }
+  .row .field { flex: 1; min-width: 150px; margin-top: 16px; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  input[type="number"] {
+    width: 80px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #fff; color: var(--ink);
+  }
+  input[type="color"] {
+    width: 42px; height: 34px; padding: 2px; border: 1px solid var(--line); border-radius: 5px;
+    background: #fff; cursor: pointer;
+  }
+  .range-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); }
+
+  .logo-drop {
+    border: 1.5px dashed var(--line); border-radius: 5px; padding: 18px;
+    text-align: center; cursor: pointer; transition: all .2s; background: rgba(255,255,255,0.4);
+    font-size: 14px; color: var(--ink-soft);
+  }
+  .logo-drop:hover { border-color: var(--accent); color: var(--accent); }
+  .logo-preview { display: flex; align-items: center; gap: 14px; }
+  .logo-preview img {
+    max-height: 56px; max-width: 140px; border: 1px solid var(--line);
+    border-radius: 4px; background: #fff; padding: 4px;
+  }
+  .logo-preview .pname { font-size: 14px; font-weight: 500; }
+  .logo-preview .ld { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+
+  .bar { margin-top: 32px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .btn {
+    font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 15px;
+    border: none; border-radius: 4px; padding: 14px 28px; cursor: pointer; transition: all .18s; letter-spacing: 0.01em;
+  }
+  .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 8px 20px -8px var(--accent-deep); }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-deep); transform: translateY(-1px); }
+  .btn-primary:disabled { background: var(--line); color: var(--ink-soft); cursor: default; box-shadow: none; }
+  .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+  .status { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--ink-soft); }
+  .status.err { color: var(--accent); }
+  .status.ok { color: var(--ok); }
+
+  .empty { text-align: center; color: var(--ink-soft); font-size: 14px; padding: 8px 0; font-style: italic; }
+  .foot {
+    margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft);
+    letter-spacing: 0.03em; line-height: 1.7;
+  }
+  .foot strong { color: var(--ok); font-weight: 500; }
+
+  .suite-nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 28px; }
+  .suite-nav a {
+    text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft);
+    padding: 8px 12px; border: 1px solid var(--line); border-radius: 4px;
+    background: rgba(255,255,255,0.35); transition: all .15s;
+  }
+  .suite-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .suite-nav a.current { background: var(--accent); border-color: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="suite-nav">
+    <a href="./pdf-studio.html">Studio</a>
+    <a href="./pdf-merger.html" class="current">Merge</a>
+    <a href="./pdf-to-images.html">To Images</a>
+    <a href="./pdf-sign-stamp.html">Sign &amp; Stamp</a>
+  </nav>
+  <header>
+    <div class="eyebrow">Local &middot; Private &middot; No Upload</div>
+    <h1>Merge your <em>PDFs</em></h1>
+    <p class="sub">Drop files, set the order, add a logo and page numbers, and stitch them into one document — all in your browser.</p>
+  </header>
+
+  <div class="drop" id="drop">
+    <div class="drop-ic">＋</div>
+    <div class="drop-main">Drop PDFs here or <span>browse</span></div>
+    <div class="drop-sub">.pdf files only</div>
+    <input type="file" id="file" accept="application/pdf" multiple hidden>
+  </div>
+
+  <div class="list" id="list">
+    <div class="empty" id="empty">No files added yet.</div>
+  </div>
+
+  <!-- LOGO PANEL -->
+  <div class="panel" id="logoPanel">
+    <div class="panel-head" data-toggle="logoPanel">
+      <div class="panel-title">Logo at top of page</div>
+      <label class="switch" onclick="event.stopPropagation()">
+        <input type="checkbox" id="logoOn"><span class="slider"></span>
+      </label>
+    </div>
+    <div class="panel-body">
+      <div class="field" id="logoUploadField">
+        <div class="logo-drop" id="logoDrop">Click to upload a logo &nbsp;·&nbsp; PNG or JPG</div>
+        <input type="file" id="logoFile" accept="image/png,image/jpeg" hidden>
+      </div>
+      <div class="field" id="logoPreviewField" style="display:none">
+        <div class="logo-preview">
+          <img id="logoImg" alt="logo preview">
+          <div>
+            <div class="pname" id="logoName"></div>
+            <div class="ld" id="logoDims"></div>
+          </div>
+          <button class="ic-btn del" id="logoRemove" title="Remove logo" style="margin-left:auto">✕</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Alignment</span>
+        <div class="seg" id="logoAlign">
+          <button data-v="left" class="active">Left</button>
+          <button data-v="center">Center</button>
+          <button data-v="right">Right</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Apply to</span>
+        <div class="seg" id="logoScope">
+          <button data-v="all" class="active">All pages</button>
+          <button data-v="first">First page only</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <span class="field-label">Size — <span class="range-val" id="logoSizeVal">22%</span> of page width</span>
+          <input type="range" id="logoSize" min="5" max="60" value="22">
+        </div>
+        <div class="field">
+          <span class="field-label">Top margin (pt)</span>
+          <input type="number" id="logoMargin" value="28" min="0" max="200">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE NUMBER PANEL -->
+  <div class="panel" id="pageNumPanel">
+    <div class="panel-head" data-toggle="pageNumPanel">
+      <div class="panel-title">Page numbers</div>
+      <label class="switch" onclick="event.stopPropagation()">
+        <input type="checkbox" id="pnOn"><span class="slider"></span>
+      </label>
+    </div>
+    <div class="panel-body">
+      <div class="field">
+        <span class="field-label">Position</span>
+        <div class="seg" id="pnPos">
+          <button data-v="bl">Bottom L</button>
+          <button data-v="bc" class="active">Bottom C</button>
+          <button data-v="br">Bottom R</button>
+          <button data-v="tl">Top L</button>
+          <button data-v="tr">Top R</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Format</span>
+        <div class="seg" id="pnFmt">
+          <button data-v="n" class="active">1</button>
+          <button data-v="slash">1 / N</button>
+          <button data-v="page">Page 1 of N</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <span class="field-label">Start at</span>
+          <input type="number" id="pnStart" value="1" min="0" max="9999">
+        </div>
+        <div class="field">
+          <span class="field-label">Font size (pt)</span>
+          <input type="number" id="pnSize" value="10" min="5" max="48">
+        </div>
+        <div class="field">
+          <span class="field-label">Margin (pt)</span>
+          <input type="number" id="pnMargin" value="28" min="0" max="200">
+        </div>
+        <div class="field" style="flex:0">
+          <span class="field-label">Color</span>
+          <input type="color" id="pnColor" value="#333333">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bar">
+    <button class="btn btn-primary" id="merge" disabled>Merge &amp; Download</button>
+    <button class="btn btn-ghost" id="clear" disabled>Clear all</button>
+    <span class="status" id="status"></span>
+  </div>
+
+  <div class="foot">
+    Powered by pdf-lib &middot; runs entirely client-side &middot; <strong>your files are never sent anywhere</strong>
+  </div>
+</div>
+
+<script>
+const { PDFDocument, StandardFonts, rgb, degrees } = PDFLib;
+
+const $ = id => document.getElementById(id);
+const dropEl = $('drop'), fileEl = $('file'), listEl = $('list'), emptyEl = $('empty');
+const mergeBtn = $('merge'), clearBtn = $('clear'), statusEl = $('status');
+
+let files = [];          // { id, file, name, size }
+let dragId = null;
+let logo = null;         // { bytes, type, name, w, h, dataUrl }
+
+/* ---------- helpers ---------- */
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(0) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
+}
+function setStatus(msg, type) { statusEl.textContent = msg || ''; statusEl.className = 'status' + (type ? ' ' + type : ''); }
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#',''), 16);
+  return rgb(((n>>16)&255)/255, ((n>>8)&255)/255, (n&255)/255);
+}
+function segValue(id) { return $(id).querySelector('button.active').dataset.v; }
+
+/* ---------- collapsible panels + segmented controls ---------- */
+document.querySelectorAll('[data-toggle]').forEach(h => {
+  h.addEventListener('click', () => $(h.dataset.toggle).classList.toggle('open'));
+});
+document.querySelectorAll('.seg').forEach(seg => {
+  seg.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    seg.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
+$('logoSize').addEventListener('input', e => $('logoSizeVal').textContent = e.target.value + '%');
+$('logoOn').addEventListener('change', e => { if (e.target.checked) $('logoPanel').classList.add('open'); });
+$('pnOn').addEventListener('change', e => { if (e.target.checked) $('pageNumPanel').classList.add('open'); });
+
+/* ---------- file list ---------- */
+function addFiles(fileList) {
+  const incoming = [...fileList].filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+  const rejected = fileList.length - incoming.length;
+  incoming.forEach(f => files.push({ id: crypto.randomUUID(), file: f, name: f.name, size: f.size }));
+  if (incoming.length) setStatus(`${incoming.length} file(s) added.`, 'ok');
+  if (rejected) setStatus(`${rejected} non-PDF file(s) skipped.`, 'err');
+  render();
+}
+function render() {
+  listEl.innerHTML = '';
+  if (!files.length) { listEl.appendChild(emptyEl); mergeBtn.disabled = true; clearBtn.disabled = true; return; }
+  clearBtn.disabled = false; mergeBtn.disabled = false;
+  files.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'item'; row.draggable = true; row.dataset.id = item.id;
+    row.innerHTML = `
+      <div class="grip" title="Drag to reorder">⠿</div>
+      <div class="num">${i + 1}</div>
+      <div class="meta">
+        <div class="name" title="${item.name}">${item.name}</div>
+        <div class="info">${fmtSize(item.size)}</div>
+      </div>
+      <div class="controls">
+        <button class="ic-btn up" ${i === 0 ? 'disabled' : ''} title="Move up">↑</button>
+        <button class="ic-btn down" ${i === files.length - 1 ? 'disabled' : ''} title="Move down">↓</button>
+        <button class="ic-btn del" title="Remove">✕</button>
+      </div>`;
+    row.querySelector('.up').onclick = () => swap(i, i - 1);
+    row.querySelector('.down').onclick = () => swap(i, i + 1);
+    row.querySelector('.del').onclick = () => { files.splice(i, 1); render(); };
+    row.addEventListener('dragstart', e => { dragId = item.id; row.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+    row.addEventListener('dragend', () => { dragId = null; document.querySelectorAll('.item').forEach(el => el.classList.remove('dragging','drop-target')); });
+    row.addEventListener('dragover', e => { e.preventDefault(); if (item.id !== dragId) row.classList.add('drop-target'); });
+    row.addEventListener('dragleave', () => row.classList.remove('drop-target'));
+    row.addEventListener('drop', e => {
+      e.preventDefault(); row.classList.remove('drop-target');
+      if (item.id === dragId) return;
+      const from = files.findIndex(f => f.id === dragId), to = files.findIndex(f => f.id === item.id);
+      const [moved] = files.splice(from, 1); files.splice(to, 0, moved); render();
+    });
+    listEl.appendChild(row);
+  });
+}
+function swap(a, b) { if (b < 0 || b >= files.length) return; [files[a], files[b]] = [files[b], files[a]]; render(); }
+
+/* ---------- logo upload ---------- */
+async function loadLogo(file) {
+  if (!file) return;
+  const okType = file.type === 'image/png' || file.type === 'image/jpeg';
+  if (!okType) { setStatus('Logo must be a PNG or JPG.', 'err'); return; }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const dataUrl = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(file); });
+  const dims = await new Promise(res => { const img = new Image(); img.onload = () => res({ w: img.width, h: img.height }); img.src = dataUrl; });
+  logo = { bytes, type: file.type, name: file.name, w: dims.w, h: dims.h, dataUrl };
+  $('logoImg').src = dataUrl;
+  $('logoName').textContent = file.name;
+  $('logoDims').textContent = dims.w + ' × ' + dims.h + ' px';
+  $('logoUploadField').style.display = 'none';
+  $('logoPreviewField').style.display = 'block';
+  if (!$('logoOn').checked) { $('logoOn').checked = true; }
+}
+$('logoDrop').onclick = () => $('logoFile').click();
+$('logoFile').onchange = e => { loadLogo(e.target.files[0]); e.target.value = ''; };
+$('logoRemove').onclick = () => {
+  logo = null;
+  $('logoUploadField').style.display = 'block';
+  $('logoPreviewField').style.display = 'none';
+};
+
+/* ---------- merge ---------- */
+async function merge() {
+  if (!files.length) return;
+  mergeBtn.disabled = true;
+  setStatus('Merging…', '');
+  try {
+    const out = await PDFDocument.create();
+
+    // collect pages
+    for (let i = 0; i < files.length; i++) {
+      setStatus(`Processing ${i + 1} of ${files.length}…`, '');
+      const bytes = await files[i].file.arrayBuffer();
+      const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      const pages = await out.copyPages(doc, doc.getPageIndices());
+      pages.forEach(p => out.addPage(p));
+    }
+
+    const allPages = out.getPages();
+    const total = allPages.length;
+
+    // embed logo once
+    let embeddedLogo = null, logoOn = $('logoOn').checked && logo;
+    if (logoOn) {
+      embeddedLogo = logo.type === 'image/png' ? await out.embedPng(logo.bytes) : await out.embedJpg(logo.bytes);
+    }
+
+    // page-number setup
+    const pnOn = $('pnOn').checked;
+    let font = null;
+    if (pnOn) font = await out.embedFont(StandardFonts.Helvetica);
+
+    if (logoOn || pnOn) setStatus('Stamping pages…', '');
+
+    const logoAlign = segValue('logoAlign');
+    const logoScope = segValue('logoScope');
+    const logoPct = parseInt($('logoSize').value, 10) / 100;
+    const logoTopMargin = parseFloat($('logoMargin').value) || 0;
+
+    const pnPos = segValue('pnPos');
+    const pnFmt = segValue('pnFmt');
+    const pnStart = parseInt($('pnStart').value, 10) || 0;
+    const pnSize = parseFloat($('pnSize').value) || 10;
+    const pnMargin = parseFloat($('pnMargin').value) || 0;
+    const pnColor = hexToRgb($('pnColor').value);
+
+    allPages.forEach((page, idx) => {
+      const { width: W, height: H } = page.getSize();
+
+      // ---- logo ----
+      if (logoOn && (logoScope === 'all' || idx === 0)) {
+        const lw = W * logoPct;
+        const lh = lw * (logo.h / logo.w);
+        const sideMargin = 36;
+        let lx;
+        if (logoAlign === 'left') lx = sideMargin;
+        else if (logoAlign === 'center') lx = (W - lw) / 2;
+        else lx = W - sideMargin - lw;
+        const ly = H - logoTopMargin - lh;
+        page.drawImage(embeddedLogo, { x: lx, y: ly, width: lw, height: lh });
+      }
+
+      // ---- page number ----
+      if (pnOn) {
+        const numVal = pnStart + idx;
+        const denom = pnStart + total - 1;
+        let text;
+        if (pnFmt === 'n') text = String(numVal);
+        else if (pnFmt === 'slash') text = numVal + ' / ' + denom;
+        else text = 'Page ' + numVal + ' of ' + denom;
+
+        const tw = font.widthOfTextAtSize(text, pnSize);
+        const side = 36;
+        let x, y;
+        const isTop = pnPos[0] === 't';
+        y = isTop ? (H - pnMargin - pnSize) : pnMargin;
+        const horiz = pnPos[1];
+        if (horiz === 'l') x = side;
+        else if (horiz === 'c') x = (W - tw) / 2;
+        else x = W - side - tw;
+
+        page.drawText(text, { x, y, size: pnSize, font, color: pnColor });
+      }
+    });
+
+    const mergedBytes = await out.save();
+    const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'merged.pdf'; a.click();
+    URL.revokeObjectURL(url);
+    setStatus(`Done — ${files.length} file(s), ${total} page(s).`, 'ok');
+  } catch (err) {
+    console.error(err);
+    setStatus('Error: ' + (err.message || 'could not merge files'), 'err');
+  } finally {
+    mergeBtn.disabled = files.length < 1;
+  }
+}
+
+/* ---------- wiring ---------- */
+dropEl.onclick = () => fileEl.click();
+fileEl.onchange = e => { addFiles(e.target.files); fileEl.value = ''; };
+dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.classList.add('over'); });
+dropEl.addEventListener('dragleave', () => dropEl.classList.remove('over'));
+dropEl.addEventListener('drop', e => { e.preventDefault(); dropEl.classList.remove('over'); addFiles(e.dataTransfer.files); });
+mergeBtn.onclick = merge;
+clearBtn.onclick = () => { files = []; render(); setStatus(''); };
+
+render();
+</script>
+</body>
+</html>

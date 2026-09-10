@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JSS PDF Studio — All-in-One PDF Toolkit</title>
+
+<!-- Client-side PDF libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs" type="module"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+
+<style>
+  :root{
+    --bg:#f5f7fb;
+    --panel:#ffffff;
+    --text:#18202b;
+    --muted:#6f7b8b;
+    --line:#e5e9f0;
+    --red:#e5322d;
+    --red2:#c81e1a;
+    --blue:#2563eb;
+    --green:#16a34a;
+    --shadow:0 14px 35px rgba(20,30,55,.08);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  button,input,select,textarea{font:inherit}
+  button{cursor:pointer}
+  .topbar{
+    position:sticky;top:0;z-index:30;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:18px;padding:14px 24px;
+    background:rgba(255,255,255,.94);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:12px;font-weight:850;font-size:20px}
+  .logo{
+    width:38px;height:38px;border-radius:12px;background:var(--red);
+    color:#fff;display:grid;place-items:center;font-size:21px;box-shadow:0 8px 18px rgba(229,50,45,.25)
+  }
+  .top-actions{display:flex;align-items:center;gap:9px}
+  .btn{
+    border:1px solid var(--line);background:#fff;color:var(--text);
+    padding:10px 14px;border-radius:11px;font-weight:700;
+  }
+  .btn:hover{background:#f8fafc}
+  .btn.primary{background:var(--red);border-color:var(--red);color:white}
+  .btn.primary:hover{background:var(--red2)}
+  .btn.blue{background:var(--blue);border-color:var(--blue);color:white}
+  .btn.danger{color:var(--red)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .suite-nav{display:flex;gap:4px;flex-wrap:wrap}
+  .suite-nav a{
+    text-decoration:none;color:var(--muted);font-weight:750;font-size:13px;
+    padding:8px 12px;border-radius:10px;border:1px solid transparent;
+  }
+  .suite-nav a:hover{background:#f4f6fa;color:var(--text)}
+  .suite-nav a.current{background:#fff5f5;border-color:#ffd0ce;color:var(--red2)}
+  .hero{
+    max-width:1440px;margin:0 auto;padding:34px 24px 12px;
+  }
+  .hero h1{margin:0 0 7px;font-size:clamp(28px,4vw,44px);letter-spacing:-1.4px}
+  .hero p{margin:0;color:var(--muted);font-size:16px}
+  .layout{
+    max-width:1440px;margin:0 auto;padding:16px 24px 40px;
+    display:grid;grid-template-columns:290px minmax(0,1fr) 320px;gap:18px;
+  }
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+  .sidebar,.settings{padding:16px;height:max-content;position:sticky;top:82px}
+  .panel-title{font-size:13px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.8px;margin:4px 4px 12px}
+  .tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .tool{
+    border:1px solid var(--line);background:#fff;border-radius:13px;padding:12px 10px;
+    min-height:82px;text-align:left;
+  }
+  .tool:hover{border-color:#d7dce6;box-shadow:0 8px 18px rgba(20,30,55,.06)}
+  .tool.active{border-color:#ffd0ce;background:#fff5f5}
+  .tool .icon{font-size:22px;margin-bottom:7px}
+  .tool strong{display:block;font-size:13px}
+  .tool small{display:block;margin-top:3px;color:var(--muted);line-height:1.25}
+  .workspace{min-width:0}
+  .dropzone{
+    padding:34px 24px;border:2px dashed #d7dce5;border-radius:18px;background:#fff;
+    text-align:center;transition:.2s;min-height:190px;display:grid;place-items:center;
+  }
+  .dropzone.dragover{border-color:var(--red);background:#fff7f7;transform:scale(1.003)}
+  .drop-inner{max-width:600px}
+  .drop-icon{font-size:45px}
+  .dropzone h2{margin:8px 0 6px;font-size:24px}
+  .dropzone p{margin:0 0 16px;color:var(--muted)}
+  #fileInput{display:none}
+  .statusbar{
+    display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+    padding:12px 2px;color:var(--muted);font-size:13px;
+  }
+  .pages{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;
+    align-items:start;
+  }
+  .page-card{
+    position:relative;background:#fff;border:1px solid var(--line);border-radius:14px;
+    overflow:hidden;box-shadow:0 8px 22px rgba(20,30,55,.06);user-select:none;
+  }
+  .page-card.selected{outline:3px solid rgba(37,99,235,.28);border-color:var(--blue)}
+  .thumb-wrap{
+    background:#eef1f6;aspect-ratio:0.71;display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+  .thumb-wrap canvas{width:100%;height:100%;object-fit:contain}
+  .page-meta{display:flex;justify-content:space-between;gap:8px;padding:9px 10px;font-size:12px}
+  .page-meta span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .handle{cursor:grab;color:#9aa5b5}
+  .badge{
+    position:absolute;top:8px;left:8px;background:rgba(20,28,40,.78);color:white;
+    border-radius:8px;padding:4px 7px;font-size:11px;font-weight:800;
+  }
+  .quick-actions{
+    position:absolute;top:8px;right:8px;display:flex;gap:5px;opacity:0;transition:.15s;
+  }
+  .page-card:hover .quick-actions{opacity:1}
+  .mini{
+    width:30px;height:30px;border:none;border-radius:8px;background:rgba(255,255,255,.94);
+    box-shadow:0 4px 14px rgba(0,0,0,.15);font-weight:850;
+  }
+  .empty{
+    margin-top:12px;padding:48px 24px;text-align:center;color:var(--muted);
+    border:1px solid var(--line);border-radius:18px;background:#fff;
+  }
+  .settings .group{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+  .settings .group:first-of-type{border-top:0;padding-top:0;margin-top:0}
+  label{font-size:12px;color:var(--muted);font-weight:800;display:block;margin-bottom:6px}
+  input[type=text],input[type=number],input[type=password],select,textarea{
+    width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:#b9c4d4;box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .check{display:flex;align-items:center;gap:8px;margin:8px 0;color:var(--text);font-size:13px}
+  .check input{width:auto}
+  .action-stack{display:grid;gap:9px;margin-top:16px}
+  .notice{
+    padding:10px 12px;border-radius:10px;background:#f7f8fb;color:var(--muted);font-size:12px;line-height:1.45
+  }
+  .progress-wrap{display:none;margin:10px 0}
+  .progress{height:8px;background:#edf0f4;border-radius:99px;overflow:hidden}
+  .progress > div{height:100%;width:0;background:var(--red);transition:.2s}
+  .toast{
+    position:fixed;right:24px;bottom:24px;z-index:99;padding:12px 15px;border-radius:12px;
+    color:white;background:#17202c;box-shadow:0 12px 28px rgba(0,0,0,.22);display:none;max-width:340px
+  }
+  .file-list{display:grid;gap:7px;margin-top:10px}
+  .file-pill{
+    font-size:12px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;
+    background:#fafbfc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+  }
+  .divider{height:1px;background:var(--line);margin:14px 0}
+  .select-row{display:flex;gap:8px;flex-wrap:wrap}
+  .select-row .btn{padding:7px 10px;font-size:12px}
+  .tool-section{display:none}
+  .tool-section.active{display:block}
+  .footer{
+    max-width:1440px;margin:0 auto;padding:0 24px 34px;color:var(--muted);font-size:12px;text-align:center
+  }
+  @media (max-width:1150px){
+    .layout{grid-template-columns:240px 1fr}
+    .settings{grid-column:1/-1;position:static}
+  }
+  @media (max-width:760px){
+    .topbar{padding:10px 14px}
+    .hero{padding:24px 14px 8px}
+    .layout{padding:12px 14px 30px;grid-template-columns:1fr}
+    .sidebar,.settings{position:static}
+    .tool-grid{grid-template-columns:repeat(2,1fr)}
+    .pages{grid-template-columns:repeat(2,1fr)}
+    .top-actions .btn:not(.primary){display:none}
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="logo">PDF</div><div>JSS PDF Studio</div></div>
+  <nav class="suite-nav">
+    <a href="./pdf-studio.html" class="current">Studio</a>
+    <a href="./pdf-merger.html">Merge</a>
+    <a href="./pdf-to-images.html">To Images</a>
+    <a href="./pdf-sign-stamp.html">Sign &amp; Stamp</a>
+  </nav>
+  <div class="top-actions">
+    <button class="btn" id="clearBtn">Clear</button>
+    <button class="btn primary" id="downloadTopBtn">Download PDF</button>
+  </div>
+</header>
+
+<section class="hero">
+  <h1>All‑in‑One PDF Toolkit</h1>
+  <p>Merge, rearrange, rotate, delete, extract, split, watermark and number PDF pages directly in your browser.</p>
+</section>
+
+<main class="layout">
+  <aside class="panel sidebar">
+    <div class="panel-title">PDF Tools</div>
+    <div class="tool-grid" id="toolGrid">
+      <button class="tool active" data-tool="organize"><div class="icon">🗂️</div><strong>Organize PDF</strong><small>Rearrange, rotate & delete</small></button>
+      <button class="tool" data-tool="merge"><div class="icon">🔗</div><strong>Merge PDF</strong><small>Combine multiple PDFs</small></button>
+      <button class="tool" data-tool="split"><div class="icon">✂️</div><strong>Split / Extract</strong><small>Save selected pages</small></button>
+      <button class="tool" data-tool="watermark"><div class="icon">💧</div><strong>Watermark</strong><small>Add text watermark</small></button>
+      <button class="tool" data-tool="numbers"><div class="icon">🔢</div><strong>Page Numbers</strong><small>Add page numbering</small></button>
+      <button class="tool" data-tool="imagepdf"><div class="icon">🖼️</div><strong>Image to PDF</strong><small>JPG / PNG to PDF</small></button>
+      <button class="tool" data-tool="compress"><div class="icon">🗜️</div><strong>Compress PDF</strong><small>Reduce PDF file size</small></button>
+      <button class="tool" data-tool="info"><div class="icon">ℹ️</div><strong>PDF Info</strong><small>Document details</small></button>
+    </div>
+    <div class="divider"></div>
+    <div class="panel-title">Loaded Files</div>
+    <div id="fileList" class="file-list"><div class="notice">No PDF loaded yet.</div></div>
+  </aside>
+
+  <section class="workspace">
+    <div class="dropzone" id="dropzone">
+      <div class="drop-inner">
+        <div class="drop-icon">📄</div>
+        <h2>Drop PDFs or images here</h2>
+        <p>You can select multiple PDF, JPG or PNG files. Processing stays in your browser.</p>
+        <button class="btn primary" id="chooseBtn">Select files</button>
+        <input id="fileInput" type="file" multiple accept=".pdf,application/pdf,image/jpeg,image/png" />
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <div id="statusText">0 pages loaded</div>
+      <div class="select-row">
+        <button class="btn" id="selectAllBtn">Select all</button>
+        <button class="btn" id="selectNoneBtn">Clear selection</button>
+        <button class="btn danger" id="deleteSelectedBtn">Delete selected</button>
+      </div>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress"><div id="progressBar"></div></div>
+    </div>
+
+    <div id="pages" class="pages"></div>
+    <div id="emptyState" class="empty">
+      Add a PDF to see page thumbnails. Drag cards to rearrange pages.
+    </div>
+  </section>
+
+  <aside class="panel settings">
+    <div class="panel-title">Tool Settings</div>
+
+    <div id="organizeSettings" class="tool-section active">
+      <div class="notice">Drag page thumbnails to rearrange them. Click a page to select it. Use ↻ to rotate or × to remove individual pages.</div>
+      <div class="group">
+        <button class="btn" style="width:100%" id="reverseBtn">Reverse page order</button>
+      </div>
+    </div>
+
+    <div id="mergeSettings" class="tool-section">
+      <div class="notice">Upload two or more PDFs. Their pages will appear in one workspace; reorder them before downloading.</div>
+    </div>
+
+    <div id="splitSettings" class="tool-section">
+      <div class="group">
+        <label>Pages to extract</label>
+        <input id="pageRange" type="text" placeholder="e.g. 1-3, 5, 8-10" />
+      </div>
+      <div class="group">
+        <button class="btn blue" style="width:100%" id="extractBtn">Download selected / range</button>
+      </div>
+    </div>
+
+    <div id="watermarkSettings" class="tool-section">
+      <div class="group">
+        <label>Watermark text</label>
+        <input id="watermarkText" type="text" value="CONFIDENTIAL" />
+      </div>
+      <div class="row group">
+        <div>
+          <label>Font size</label>
+          <input id="watermarkSize" type="number" min="8" max="120" value="42" />
+        </div>
+        <div>
+          <label>Opacity</label>
+          <input id="watermarkOpacity" type="number" min="0.05" max="1" step="0.05" value="0.18" />
+        </div>
+      </div>
+      <div class="group">
+        <label>Position</label>
+        <select id="watermarkPos">
+          <option value="center">Center</option>
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+        </select>
+      </div>
+      <div class="check"><input type="checkbox" id="watermarkRotate" checked /> <span>Diagonal watermark</span></div>
+    </div>
+
+    <div id="numbersSettings" class="tool-section">
+      <div class="row">
+        <div><label>Start number</label><input id="startNumber" type="number" value="1" /></div>
+        <div><label>Font size</label><input id="numberSize" type="number" value="10" /></div>
+      </div>
+      <div class="group">
+        <label>Position</label>
+        <select id="numberPos">
+          <option value="bottom-center">Bottom center</option>
+          <option value="bottom-right">Bottom right</option>
+          <option value="bottom-left">Bottom left</option>
+          <option value="top-center">Top center</option>
+          <option value="top-right">Top right</option>
+          <option value="top-left">Top left</option>
+        </select>
+      </div>
+      <div class="check"><input type="checkbox" id="showTotal" /> <span>Show total, e.g. 1 / 10</span></div>
+    </div>
+
+    <div id="imagepdfSettings" class="tool-section">
+      <div class="notice">Add JPG or PNG files with the file picker. Each image becomes one PDF page.</div>
+      <div class="group">
+        <label>Image page size</label>
+        <select id="imagePageSize">
+          <option value="fit">Fit image</option>
+          <option value="a4">A4</option>
+          <option value="letter">Letter</option>
+        </select>
+      </div>
+      <div class="group">
+        <label>Margin</label>
+        <input id="imageMargin" type="number" value="24" min="0" max="100" />
+      </div>
+    </div>
+
+    <div id="compressSettings" class="tool-section">
+      <div class="notice">
+        Real browser-side compression: each PDF page is rendered and rebuilt using JPEG compression.
+        This works especially well for scanned/image-heavy PDFs. Selectable text may be flattened in the compressed output.
+      </div>
+      <div class="group">
+        <label>Compression level</label>
+        <select id="compressionLevel">
+          <option value="low">Low compression — best quality</option>
+          <option value="recommended" selected>Recommended — balanced</option>
+          <option value="extreme">Extreme compression — smallest size</option>
+        </select>
+      </div>
+      <div class="group">
+        <label>Compression result</label>
+        <div id="compressionStats" class="notice">
+          Process a PDF to see original size, compressed size and percentage saved.
+        </div>
+      </div>
+    </div>
+
+    <div id="infoSettings" class="tool-section">
+      <div id="docInfo" class="notice">Load a PDF to view information.</div>
+    </div>
+
+    <div class="action-stack">
+      <button class="btn primary" id="buildBtn">Process & Download PDF</button>
+    </div>
+  </aside>
+</main>
+
+<footer class="footer">
+  Runs locally in your browser. Files are not uploaded by this page itself. Compression is optimized for scanned/image-heavy PDFs. For very large PDFs, use a desktop browser with sufficient memory.
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs";
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+
+  const { PDFDocument, StandardFonts, rgb, degrees } = PDFLib;
+
+  const state = {
+    docs: new Map(),
+    pages: [],
+    images: [],
+    currentTool: "organize",
+    nextId: 1
+  };
+
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+
+  const pagesEl = $("#pages");
+  const fileInput = $("#fileInput");
+  const dropzone = $("#dropzone");
+  const toastEl = $("#toast");
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.style.display = "block";
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(()=> toastEl.style.display="none", 2600);
+  }
+
+  function setProgress(v){
+    const wrap = $("#progressWrap");
+    const bar = $("#progressBar");
+    if(v === null){ wrap.style.display="none"; bar.style.width="0%"; return; }
+    wrap.style.display="block"; bar.style.width=Math.max(0,Math.min(100,v))+"%";
+  }
+
+  function updateStatus(){
+    $("#statusText").textContent = `${state.pages.length} page${state.pages.length===1?"":"s"} loaded`;
+    $("#emptyState").style.display = state.pages.length ? "none" : "block";
+    $("#downloadTopBtn").disabled = !state.pages.length;
+    $("#buildBtn").disabled = !state.pages.length;
+    renderFileList();
+    renderInfo();
+  }
+
+  function renderFileList(){
+    const list = $("#fileList");
+    const names = [...state.docs.values()].map(d => d.name);
+    if(!names.length){ list.innerHTML='<div class="notice">No PDF loaded yet.</div>'; return; }
+    list.innerHTML = names.map(n=>`<div class="file-pill" title="${escapeHtml(n)}">${escapeHtml(n)}</div>`).join("");
+  }
+
+  function renderInfo(){
+    const info = $("#docInfo");
+    const docs = [...state.docs.values()];
+    if(!docs.length){ info.textContent="Load a PDF to view information."; return; }
+    const totalBytes = docs.reduce((a,d)=>a+d.bytes.byteLength,0);
+    info.innerHTML = `
+      <strong>${docs.length}</strong> PDF file(s)<br>
+      <strong>${state.pages.length}</strong> page(s) in workspace<br>
+      <strong>${formatBytes(totalBytes)}</strong> source size
+    `;
+  }
+
+  function formatBytes(n){
+    if(!n) return "0 B";
+    const u=["B","KB","MB","GB"]; let i=Math.floor(Math.log(n)/Math.log(1024));
+    return (n/Math.pow(1024,i)).toFixed(i?1:0)+" "+u[i];
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+  }
+
+  async function addFiles(files){
+    const arr=[...files];
+    if(!arr.length) return;
+    setProgress(3);
+    let done=0;
+
+    for(const file of arr){
+      try{
+        if(file.type==="application/pdf" || file.name.toLowerCase().endsWith(".pdf")){
+          await addPdf(file);
+        }else if(file.type==="image/jpeg" || file.type==="image/png" || /\.(jpe?g|png)$/i.test(file.name)){
+          await addImageAsPdf(file);
+        }else{
+          toast(`Unsupported file: ${file.name}`);
+        }
+      }catch(err){
+        console.error(err);
+        toast(`Could not load ${file.name}`);
+      }
+      done++;
+      setProgress(5 + 90*(done/arr.length));
+    }
+    setProgress(100);
+    setTimeout(()=>setProgress(null),300);
+    updateStatus();
+  }
+
+  async function addPdf(file){
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const key = "doc_"+state.nextId++;
+    const pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption:false });
+    state.docs.set(key,{key,name:file.name,bytes,pdfDoc});
+
+    const loadingTask = pdfjsLib.getDocument({data:bytes.slice()});
+    const renderDoc = await loadingTask.promise;
+
+    for(let i=0;i<pdfDoc.getPageCount();i++){
+      const item={
+        id:"page_"+state.nextId++,
+        sourceKey:key,
+        sourcePage:i,
+        name:file.name,
+        rotation:0,
+        selected:false,
+        thumb:null
+      };
+      state.pages.push(item);
+      item.thumb = await renderThumb(renderDoc, i+1);
+      renderPageCard(item);
+    }
+  }
+
+  async function addImageAsPdf(file){
+    const imgBytes = new Uint8Array(await file.arrayBuffer());
+    const temp = await PDFDocument.create();
+    let img;
+    if(file.type==="image/png" || /\.png$/i.test(file.name)) img = await temp.embedPng(imgBytes);
+    else img = await temp.embedJpg(imgBytes);
+
+    const mode=$("#imagePageSize").value;
+    const margin=parseInt($("#imageMargin").value||"24",10);
+    let pageW,pageH;
+    if(mode==="a4"){ pageW=595.28; pageH=841.89; }
+    else if(mode==="letter"){ pageW=612; pageH=792; }
+    else { pageW=img.width; pageH=img.height; }
+
+    const p=temp.addPage([pageW,pageH]);
+    const scale=Math.min((pageW-margin*2)/img.width,(pageH-margin*2)/img.height, mode==="fit"?1e6:1);
+    const w=img.width*scale,h=img.height*scale;
+    p.drawImage(img,{x:(pageW-w)/2,y:(pageH-h)/2,width:w,height:h});
+
+    const bytes=await temp.save();
+    const pdfFile = new File([bytes], file.name.replace(/\.(jpe?g|png)$/i,"")+".pdf",{type:"application/pdf"});
+    await addPdf(pdfFile);
+  }
+
+  async function renderThumb(renderDoc, pageNum){
+    const page = await renderDoc.getPage(pageNum);
+    const viewport = page.getViewport({scale:0.35});
+    const canvas=document.createElement("canvas");
+    const ctx=canvas.getContext("2d");
+    canvas.width=Math.ceil(viewport.width);
+    canvas.height=Math.ceil(viewport.height);
+    await page.render({canvasContext:ctx,viewport}).promise;
+    return canvas.toDataURL("image/jpeg",0.78);
+  }
+
+  function renderPageCard(item){
+    const card=document.createElement("div");
+    card.className="page-card";
+    card.dataset.id=item.id;
+    card.innerHTML=`
+      <div class="badge">${state.pages.indexOf(item)+1}</div>
+      <div class="quick-actions">
+        <button class="mini rotateBtn" title="Rotate">↻</button>
+        <button class="mini removeBtn" title="Delete">×</button>
+      </div>
+      <div class="thumb-wrap"><canvas></canvas></div>
+      <div class="page-meta"><span title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span><span class="handle">☰</span></div>
+    `;
+    pagesEl.appendChild(card);
+
+    const img=new Image();
+    img.onload=()=>{
+      const c=card.querySelector("canvas");
+      const ctx=c.getContext("2d");
+      c.width=img.naturalWidth;c.height=img.naturalHeight;
+      ctx.drawImage(img,0,0);
+      applyCardRotation(card,item.rotation);
+    };
+    img.src=item.thumb;
+
+    card.addEventListener("click",e=>{
+      if(e.target.closest("button")) return;
+      item.selected=!item.selected;
+      card.classList.toggle("selected",item.selected);
+    });
+    card.querySelector(".rotateBtn").addEventListener("click",()=>{
+      item.rotation=(item.rotation+90)%360;
+      applyCardRotation(card,item.rotation);
+    });
+    card.querySelector(".removeBtn").addEventListener("click",()=>{
+      state.pages=state.pages.filter(p=>p.id!==item.id);
+      card.remove(); renumberCards(); updateStatus();
+    });
+  }
+
+  function applyCardRotation(card,rotation){
+    const c=card.querySelector("canvas");
+    c.style.transform=`rotate(${rotation}deg)`;
+    c.style.transition=".15s";
+  }
+
+  function rerenderAll(){
+    pagesEl.innerHTML="";
+    state.pages.forEach(renderPageCard);
+    renumberCards();
+  }
+
+  function renumberCards(){
+    $$(".page-card").forEach((c,i)=>c.querySelector(".badge").textContent=i+1);
+  }
+
+  new Sortable(pagesEl,{
+    animation:150,
+    handle:".handle",
+    ghostClass:"selected",
+    onEnd(){
+      const ids=$$(".page-card").map(c=>c.dataset.id);
+      state.pages.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));
+      renumberCards();
+    }
+  });
+
+  function switchTool(tool){
+    state.currentTool=tool;
+    $$(".tool").forEach(b=>b.classList.toggle("active",b.dataset.tool===tool));
+    $$(".tool-section").forEach(s=>s.classList.remove("active"));
+    $("#"+tool+"Settings")?.classList.add("active");
+  }
+
+  $$(".tool").forEach(btn=>btn.addEventListener("click",()=>switchTool(btn.dataset.tool)));
+
+  $("#chooseBtn").addEventListener("click",()=>fileInput.click());
+  fileInput.addEventListener("change",()=>{ addFiles(fileInput.files); fileInput.value=""; });
+  ["dragenter","dragover"].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.add("dragover")}));
+  ["dragleave","drop"].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.remove("dragover")}));
+  dropzone.addEventListener("drop",e=>addFiles(e.dataTransfer.files));
+
+  $("#selectAllBtn").addEventListener("click",()=>{ state.pages.forEach(p=>p.selected=true); $$(".page-card").forEach(c=>c.classList.add("selected")); });
+  $("#selectNoneBtn").addEventListener("click",()=>{ state.pages.forEach(p=>p.selected=false); $$(".page-card").forEach(c=>c.classList.remove("selected")); });
+  $("#deleteSelectedBtn").addEventListener("click",()=>{
+    const n=state.pages.filter(p=>p.selected).length;
+    if(!n) return toast("Select one or more pages first.");
+    state.pages=state.pages.filter(p=>!p.selected); rerenderAll(); updateStatus(); toast(`${n} page(s) removed.`);
+  });
+  $("#reverseBtn").addEventListener("click",()=>{ state.pages.reverse(); rerenderAll(); });
+
+  $("#clearBtn").addEventListener("click",()=>{
+    state.docs.clear();state.pages=[];state.images=[];pagesEl.innerHTML="";updateStatus();toast("Workspace cleared.");
+  });
+
+  function parseRange(text,total){
+    const out=new Set();
+    const parts=String(text||"").split(",").map(s=>s.trim()).filter(Boolean);
+    for(const part of parts){
+      if(part.includes("-")){
+        let [a,b]=part.split("-").map(Number);
+        if(!Number.isFinite(a)||!Number.isFinite(b)) continue;
+        if(a>b)[a,b]=[b,a];
+        for(let i=Math.max(1,a);i<=Math.min(total,b);i++)out.add(i-1);
+      }else{
+        const n=Number(part); if(n>=1&&n<=total)out.add(n-1);
+      }
+    }
+    return [...out].sort((a,b)=>a-b);
+  }
+
+  async function buildPdf(pageSubset=null){
+    if(!state.pages.length) throw new Error("No pages");
+    setProgress(5);
+    const out=await PDFDocument.create();
+    const pagesToUse=pageSubset ?? state.pages;
+
+    for(let i=0;i<pagesToUse.length;i++){
+      const item=pagesToUse[i];
+      const src=state.docs.get(item.sourceKey);
+      const [copied]=await out.copyPages(src.pdfDoc,[item.sourcePage]);
+      if(item.rotation){
+        const current=copied.getRotation().angle||0;
+        copied.setRotation(degrees((current+item.rotation)%360));
+      }
+      out.addPage(copied);
+      setProgress(10+60*(i/pagesToUse.length));
+    }
+
+    if(state.currentTool==="watermark") await applyWatermark(out);
+    if(state.currentTool==="numbers") await applyNumbers(out);
+
+    setProgress(82);
+    const bytes=await out.save({useObjectStreams:true,addDefaultPage:false});
+    setProgress(100);
+    setTimeout(()=>setProgress(null),350);
+    return bytes;
+  }
+
+  async function applyWatermark(pdf){
+    const text=$("#watermarkText").value.trim();
+    if(!text)return;
+    const size=Math.max(8,Number($("#watermarkSize").value)||42);
+    const opacity=Math.max(.05,Math.min(1,Number($("#watermarkOpacity").value)||.18));
+    const pos=$("#watermarkPos").value;
+    const diagonal=$("#watermarkRotate").checked;
+    const font=await pdf.embedFont(StandardFonts.HelveticaBold);
+    for(const p of pdf.getPages()){
+      const {width,height}=p.getSize();
+      const tw=font.widthOfTextAtSize(text,size);
+      let x=(width-tw)/2,y=(height-size)/2;
+      if(pos==="top") y=height-size-35;
+      if(pos==="bottom") y=35;
+      p.drawText(text,{x,y,size,font,color:rgb(.65,.65,.65),opacity,rotate:diagonal?degrees(35):degrees(0)});
+    }
+  }
+
+  async function applyNumbers(pdf){
+    const font=await pdf.embedFont(StandardFonts.Helvetica);
+    const start=Number($("#startNumber").value)||1;
+    const size=Math.max(6,Number($("#numberSize").value)||10);
+    const pos=$("#numberPos").value;
+    const total=pdf.getPageCount();
+    const showTotal=$("#showTotal").checked;
+    pdf.getPages().forEach((p,i)=>{
+      const {width,height}=p.getSize();
+      const txt=showTotal?`${start+i} / ${start+total-1}`:`${start+i}`;
+      const tw=font.widthOfTextAtSize(txt,size);
+      const margin=24;
+      let x=(width-tw)/2,y=margin;
+      if(pos.includes("top")) y=height-margin-size;
+      if(pos.endsWith("left")) x=margin;
+      if(pos.endsWith("right")) x=width-margin-tw;
+      p.drawText(txt,{x,y,size,font,color:rgb(.2,.2,.2)});
+    });
+  }
+
+
+  function compressionProfile(){
+    const level = $("#compressionLevel")?.value || "recommended";
+    if(level==="low") return {scale:1.6, quality:0.88, label:"Low"};
+    if(level==="extreme") return {scale:0.9, quality:0.48, label:"Extreme"};
+    return {scale:1.2, quality:0.68, label:"Recommended"};
+  }
+
+  async function compressPdfRasterized(pageSubset=null){
+    if(!state.pages.length) throw new Error("No pages");
+    const pagesToUse = pageSubset ?? state.pages;
+    const profile = compressionProfile();
+    const out = await PDFDocument.create();
+
+    setProgress(4);
+
+    for(let i=0;i<pagesToUse.length;i++){
+      const item = pagesToUse[i];
+      const src = state.docs.get(item.sourceKey);
+      if(!src) continue;
+
+      const loadingTask = pdfjsLib.getDocument({data:src.bytes.slice()});
+      const renderDoc = await loadingTask.promise;
+      const page = await renderDoc.getPage(item.sourcePage + 1);
+
+      const baseViewport = page.getViewport({scale:1});
+      const viewport = page.getViewport({scale:profile.scale});
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.floor(viewport.width));
+      canvas.height = Math.max(1, Math.floor(viewport.height));
+      const ctx = canvas.getContext("2d", {alpha:false});
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+
+      await page.render({canvasContext:ctx, viewport}).promise;
+
+      let dataUrl;
+      try{
+        dataUrl = canvas.toDataURL("image/jpeg", profile.quality);
+      }catch(e){
+        dataUrl = canvas.toDataURL("image/png");
+      }
+
+      const res = await fetch(dataUrl);
+      const imgBytes = new Uint8Array(await res.arrayBuffer());
+      const img = dataUrl.startsWith("data:image/png")
+        ? await out.embedPng(imgBytes)
+        : await out.embedJpg(imgBytes);
+
+      const newPage = out.addPage([baseViewport.width, baseViewport.height]);
+      let rot = item.rotation || 0;
+
+      if(rot % 180 === 0){
+        newPage.drawImage(img,{
+          x:0,y:0,
+          width:baseViewport.width,
+          height:baseViewport.height
+        });
+      } else {
+        // preserve visual orientation by rotating image inside page
+        newPage.drawImage(img,{
+          x:baseViewport.width,
+          y:0,
+          width:baseViewport.height,
+          height:baseViewport.width,
+          rotate:degrees(90)
+        });
+      }
+
+      setProgress(8 + 78*((i+1)/pagesToUse.length));
+    }
+
+    setProgress(92);
+    const bytes = await out.save({useObjectStreams:true, addDefaultPage:false});
+    setProgress(100);
+    setTimeout(()=>setProgress(null),350);
+    return bytes;
+  }
+
+  function currentSourceSize(){
+    const unique = new Map();
+    for(const p of state.pages){
+      if(!unique.has(p.sourceKey)){
+        const d = state.docs.get(p.sourceKey);
+        if(d) unique.set(p.sourceKey,d.bytes.byteLength);
+      }
+    }
+    return [...unique.values()].reduce((a,b)=>a+b,0);
+  }
+
+  function updateCompressionStats(original, compressed){
+    const el = $("#compressionStats");
+    if(!el) return;
+    const saved = original > 0 ? ((original-compressed)/original)*100 : 0;
+    const sign = saved >= 0 ? "" : "+";
+    el.innerHTML = `
+      <strong>Original:</strong> ${formatBytes(original)}<br>
+      <strong>Compressed:</strong> ${formatBytes(compressed)}<br>
+      <strong>${saved >= 0 ? "Saved" : "Increase"}:</strong> ${sign}${Math.abs(saved).toFixed(1)}%
+    `;
+  }
+
+  function downloadBytes(bytes,name){
+    const blob=new Blob([bytes],{type:"application/pdf"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }
+
+  async function processDownload(){
+    try{
+      if(!state.pages.length)return toast("Add a PDF first.");
+
+      let bytes;
+      let name="processed-document.pdf";
+
+      if(state.currentTool==="compress"){
+        const originalSize = currentSourceSize();
+        bytes = await compressPdfRasterized();
+        updateCompressionStats(originalSize, bytes.byteLength);
+        name="compressed-document.pdf";
+        toast("Compressed PDF created successfully.");
+      }else{
+        bytes=await buildPdf();
+        toast("PDF created successfully.");
+      }
+
+      downloadBytes(bytes,name);
+    }catch(err){
+      console.error(err);setProgress(null);toast("Could not create PDF. The file may be encrypted, very large, or unsupported.");
+    }
+  }
+
+  $("#buildBtn").addEventListener("click",processDownload);
+  $("#downloadTopBtn").addEventListener("click",processDownload);
+
+  $("#extractBtn").addEventListener("click",async()=>{
+    try{
+      let subset=state.pages.filter(p=>p.selected);
+      if(!subset.length){
+        const idx=parseRange($("#pageRange").value,state.pages.length);
+        subset=idx.map(i=>state.pages[i]).filter(Boolean);
+      }
+      if(!subset.length)return toast("Select pages or enter a valid page range.");
+      const previous=state.currentTool;
+      state.currentTool="split";
+      const bytes=await buildPdf(subset);
+      state.currentTool=previous;
+      downloadBytes(bytes,"extracted-pages.pdf");
+      toast(`${subset.length} page(s) extracted.`);
+    }catch(err){console.error(err);setProgress(null);toast("Could not extract pages.");}
+  });
+
+  updateStatus();
+</script>
+</body>
+</html>

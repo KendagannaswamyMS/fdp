@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JSS PDF Toolkit</title>
+<style>
+  :root{
+    --bg:#f5f7fb;--panel:#fff;--text:#18202b;--muted:#6f7b8b;--line:#e5e9f0;
+    --red:#e5322d;--red2:#c81e1a;--shadow:0 14px 35px rgba(20,30,55,.08);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--bg);color:var(--text);
+  }
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 24px;
+    background:rgba(255,255,255,.94);border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:12px;font-weight:850;font-size:20px}
+  .logo{
+    width:38px;height:38px;border-radius:12px;background:var(--red);color:#fff;
+    display:grid;place-items:center;font-size:19px;box-shadow:0 8px 18px rgba(229,50,45,.25)
+  }
+  .back{
+    text-decoration:none;color:var(--muted);font-weight:750;font-size:13px;
+    padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;
+  }
+  .back:hover{color:var(--text);border-color:#d7dce6}
+  .hero{max-width:1100px;margin:0 auto;padding:44px 24px 8px}
+  .hero h1{margin:0 0 8px;font-size:clamp(30px,5vw,46px);letter-spacing:-1.4px}
+  .hero p{margin:0;color:var(--muted);font-size:16px;max-width:60ch}
+  .grid{
+    max-width:1100px;margin:0 auto;padding:26px 24px 50px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;
+  }
+  .card{
+    display:block;text-decoration:none;color:inherit;background:var(--panel);
+    border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);
+    transition:transform .15s,border-color .15s,box-shadow .15s;
+  }
+  .card:hover{transform:translateY(-2px);border-color:#ffd0ce;box-shadow:0 18px 40px rgba(20,30,55,.12)}
+  .card .icon{font-size:30px}
+  .card h2{margin:12px 0 6px;font-size:19px;letter-spacing:-.4px}
+  .card p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+  .card ul{margin:12px 0 0;padding-left:18px;color:var(--muted);font-size:12px;line-height:1.6}
+  .footer{max-width:1100px;margin:0 auto;padding:0 24px 40px;color:var(--muted);font-size:12px;text-align:center}
+  @media (max-width:640px){ .hero{padding:28px 16px 6px} .grid{padding:18px 16px 36px} }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="logo">PDF</div><div>JSS PDF Toolkit</div></div>
+  <a class="back" href="../index.html">← Back to FDP Suite</a>
+</header>
+
+<section class="hero">
+  <h1>PDF Toolkit</h1>
+  <p>Four browser-only PDF tools for institutional paperwork. Nothing is uploaded to a server — every document is opened, edited and saved inside your own browser.</p>
+</section>
+
+<nav class="grid">
+  <a class="card" href="./pdf-studio.html">
+    <div class="icon">🗂️</div>
+    <h2>PDF Studio</h2>
+    <p>The all-in-one workspace: organise, split, watermark, number and compress.</p>
+    <ul><li>Rearrange, rotate, delete pages</li><li>Extract a page range</li><li>Compress scanned PDFs</li></ul>
+  </a>
+  <a class="card" href="./pdf-merger.html">
+    <div class="icon">🔗</div>
+    <h2>Merge PDFs</h2>
+    <p>Stitch several PDFs into one, in the order you choose, with a letterhead logo.</p>
+    <ul><li>Drag to reorder files</li><li>Logo on first or every page</li><li>Page numbering</li></ul>
+  </a>
+  <a class="card" href="./pdf-to-images.html">
+    <div class="icon">🖼️</div>
+    <h2>PDF to Images</h2>
+    <p>Export pages as JPG, PNG or WebP at screen or print resolution.</p>
+    <ul><li>Pick the pages you need</li><li>72 to 600 DPI</li><li>One ZIP or separate files</li></ul>
+  </a>
+  <a class="card" href="./pdf-sign-stamp.html">
+    <div class="icon">✍️</div>
+    <h2>Sign &amp; Stamp</h2>
+    <p>Draw, type or upload a signature and place it exactly where it belongs.</p>
+    <ul><li>Drag to position on the page</li><li>Designation and date line</li><li>Repeat on every page</li></ul>
+  </a>
+</nav>
+
+<footer class="footer">
+  Client-side only · built for JSS Polytechnic, Mysuru · signatures added here are visual, not cryptographic digital signatures.
+</footer>
+</body>
+</html>

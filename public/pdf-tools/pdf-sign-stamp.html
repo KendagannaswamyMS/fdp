@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JSS PDF Studio — Sign &amp; Stamp</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+
+<style>
+  :root{
+    --bg:#f5f7fb;
+    --panel:#ffffff;
+    --text:#18202b;
+    --muted:#6f7b8b;
+    --line:#e5e9f0;
+    --red:#e5322d;
+    --red2:#c81e1a;
+    --blue:#2563eb;
+    --green:#16a34a;
+    --shadow:0 14px 35px rgba(20,30,55,.08);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  button,input,select,textarea{font:inherit}
+  button{cursor:pointer}
+  .topbar{
+    position:sticky;top:0;z-index:30;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:18px;padding:14px 24px;
+    background:rgba(255,255,255,.94);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:12px;font-weight:850;font-size:20px}
+  .logo{
+    width:38px;height:38px;border-radius:12px;background:var(--red);
+    color:#fff;display:grid;place-items:center;font-size:21px;box-shadow:0 8px 18px rgba(229,50,45,.25)
+  }
+  .top-actions{display:flex;align-items:center;gap:9px}
+  .btn{
+    border:1px solid var(--line);background:#fff;color:var(--text);
+    padding:10px 14px;border-radius:11px;font-weight:700;
+  }
+  .btn:hover{background:#f8fafc}
+  .btn.primary{background:var(--red);border-color:var(--red);color:white}
+  .btn.primary:hover{background:var(--red2)}
+  .btn.blue{background:var(--blue);border-color:var(--blue);color:white}
+  .btn.small{padding:7px 10px;font-size:12px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .suite-nav{display:flex;gap:4px;flex-wrap:wrap}
+  .suite-nav a{
+    text-decoration:none;color:var(--muted);font-weight:750;font-size:13px;
+    padding:8px 12px;border-radius:10px;border:1px solid transparent;
+  }
+  .suite-nav a:hover{background:#f4f6fa;color:var(--text)}
+  .suite-nav a.current{background:#fff5f5;border-color:#ffd0ce;color:var(--red2)}
+  .hero{max-width:1440px;margin:0 auto;padding:34px 24px 12px}
+  .hero h1{margin:0 0 7px;font-size:clamp(28px,4vw,44px);letter-spacing:-1.4px}
+  .hero p{margin:0;color:var(--muted);font-size:16px}
+  .layout{
+    max-width:1440px;margin:0 auto;padding:16px 24px 40px;
+    display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;
+  }
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+  .settings{padding:16px;height:max-content;position:sticky;top:82px}
+  .panel-title{font-size:13px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.8px;margin:4px 4px 12px}
+  .workspace{min-width:0}
+  .dropzone{
+    padding:34px 24px;border:2px dashed #d7dce5;border-radius:18px;background:#fff;
+    text-align:center;transition:.2s;min-height:190px;display:grid;place-items:center;
+  }
+  .dropzone.dragover{border-color:var(--red);background:#fff7f7}
+  .drop-inner{max-width:600px}
+  .drop-icon{font-size:45px}
+  .dropzone h2{margin:8px 0 6px;font-size:24px}
+  .dropzone p{margin:0 0 16px;color:var(--muted)}
+  #fileInput,#sigImageInput{display:none}
+  .viewer{display:none;margin-top:4px}
+  .viewer.on{display:block}
+  .pager{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    padding:12px 2px;color:var(--muted);font-size:13px;
+  }
+  .pager .grp{display:flex;align-items:center;gap:8px}
+  .stage-wrap{
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:18px;display:grid;place-items:center;overflow:auto;
+  }
+  .stage{position:relative;line-height:0;box-shadow:0 10px 30px rgba(20,30,55,.14)}
+  .stage.placing{cursor:crosshair}
+  #pageCanvas{display:block;background:#fff;max-width:100%;height:auto}
+  .place{
+    position:absolute;border:1.5px dashed rgba(37,99,235,.75);background:rgba(37,99,235,.06);
+    cursor:grab;touch-action:none;
+  }
+  .place.active{border-color:var(--red);background:rgba(229,50,45,.06)}
+  .place img{width:100%;height:100%;display:block;pointer-events:none}
+  .place .del{
+    position:absolute;top:-11px;right:-11px;width:22px;height:22px;border:none;border-radius:50%;
+    background:var(--red);color:#fff;font-weight:900;font-size:12px;line-height:1;
+    box-shadow:0 4px 12px rgba(0,0,0,.2);
+  }
+  .place .stampline{
+    position:absolute;left:0;top:100%;white-space:nowrap;font-size:11px;color:#333;
+    font-family:Helvetica,Arial,sans-serif;line-height:1.2;pointer-events:none;
+  }
+  .settings .group{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+  .settings .group:first-of-type{border-top:0;padding-top:0;margin-top:0}
+  label{font-size:12px;color:var(--muted);font-weight:800;display:block;margin-bottom:6px}
+  input[type=text],input[type=number],select{
+    width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;outline:none;
+  }
+  input[type=range]{width:100%;accent-color:var(--red)}
+  input[type=color]{width:44px;height:36px;padding:2px;border:1px solid var(--line);border-radius:9px;background:#fff}
+  input:focus,select:focus{border-color:#b9c4d4;box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .check{display:flex;align-items:center;gap:8px;margin:8px 0;color:var(--text);font-size:13px}
+  .check input{width:auto}
+  .tabs{display:flex;gap:6px;border:1px solid var(--line);border-radius:11px;padding:4px;background:#fafbfc}
+  .tabs button{
+    flex:1;border:none;background:transparent;padding:8px 6px;border-radius:8px;
+    font-size:13px;font-weight:750;color:var(--muted);
+  }
+  .tabs button.active{background:#fff;color:var(--text);box-shadow:0 2px 8px rgba(20,30,55,.08)}
+  .tab-body{display:none;margin-top:12px}
+  .tab-body.active{display:block}
+  #sigPad{
+    width:100%;height:150px;border:1px dashed #cfd6e2;border-radius:12px;background:#fff;
+    touch-action:none;display:block;
+  }
+  .sig-preview{
+    margin-top:10px;border:1px solid var(--line);border-radius:12px;background:#fff;
+    padding:10px;display:grid;place-items:center;min-height:70px;
+  }
+  .sig-preview img{max-width:100%;max-height:70px}
+  .sig-preview .none{color:var(--muted);font-size:12px}
+  .action-stack{display:grid;gap:9px;margin-top:16px}
+  .notice{padding:10px 12px;border-radius:10px;background:#f7f8fb;color:var(--muted);font-size:12px;line-height:1.45}
+  .progress-wrap{display:none;margin:10px 0}
+  .progress{height:8px;background:#edf0f4;border-radius:99px;overflow:hidden}
+  .progress > div{height:100%;width:0;background:var(--red);transition:.2s}
+  .toast{
+    position:fixed;right:24px;bottom:24px;z-index:99;padding:12px 15px;border-radius:12px;
+    color:white;background:#17202c;box-shadow:0 12px 28px rgba(0,0,0,.22);display:none;max-width:340px
+  }
+  .val{font-weight:800;color:var(--red)}
+  .footer{max-width:1440px;margin:0 auto;padding:0 24px 34px;color:var(--muted);font-size:12px;text-align:center}
+  .type-caveat{font-family:'Caveat',cursive}
+  .type-dancing{font-family:'Dancing Script',cursive}
+  @media (max-width:1100px){
+    .layout{grid-template-columns:1fr}
+    .settings{position:static}
+  }
+  @media (max-width:760px){
+    .topbar{padding:10px 14px;flex-wrap:wrap}
+    .hero{padding:24px 14px 8px}
+    .layout{padding:12px 14px 30px}
+    .stage-wrap{padding:10px}
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="logo">✍️</div><div>Sign &amp; Stamp</div></div>
+  <nav class="suite-nav">
+    <a href="./pdf-studio.html">Studio</a>
+    <a href="./pdf-merger.html">Merge</a>
+    <a href="./pdf-to-images.html">To Images</a>
+    <a href="./pdf-sign-stamp.html" class="current">Sign &amp; Stamp</a>
+  </nav>
+  <div class="top-actions">
+    <button class="btn" id="clearBtn">Clear</button>
+    <button class="btn primary" id="applyTopBtn" disabled>Apply &amp; Download</button>
+  </div>
+</header>
+
+<section class="hero">
+  <h1>Sign &amp; Stamp</h1>
+  <p>Draw, type or upload a signature, drop it exactly where it belongs on the page, add a date or designation line, and stamp it into the PDF.</p>
+</section>
+
+<main class="layout">
+  <section class="workspace">
+    <div class="dropzone" id="dropzone">
+      <div class="drop-inner">
+        <div class="drop-icon">📄</div>
+        <h2>Drop a PDF here</h2>
+        <p>The document is opened in your browser only — nothing is uploaded anywhere.</p>
+        <button class="btn primary" id="chooseBtn">Select PDF</button>
+        <input id="fileInput" type="file" accept=".pdf,application/pdf" />
+      </div>
+    </div>
+
+    <div class="viewer" id="viewer">
+      <div class="pager">
+        <div class="grp">
+          <button class="btn small" id="prevBtn">‹ Previous</button>
+          <span id="pageLabel">Page 1 of 1</span>
+          <button class="btn small" id="nextBtn">Next ›</button>
+        </div>
+        <div class="grp">
+          <span id="placeInfo">0 signatures placed</span>
+          <button class="btn small" id="placeBtn">Place signature here</button>
+          <button class="btn small" id="clearPlacementsBtn">Remove all</button>
+        </div>
+      </div>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress"><div id="progressBar"></div></div>
+      </div>
+
+      <div class="stage-wrap">
+        <div class="stage" id="stage">
+          <canvas id="pageCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="panel settings">
+    <div class="panel-title">Signature</div>
+
+    <div class="tabs" id="sigTabs">
+      <button data-tab="draw" class="active">Draw</button>
+      <button data-tab="type">Type</button>
+      <button data-tab="upload">Upload</button>
+    </div>
+
+    <div class="tab-body active" id="drawTab">
+      <canvas id="sigPad"></canvas>
+      <div class="row" style="margin-top:10px">
+        <button class="btn small" id="padClear">Clear pad</button>
+        <button class="btn small blue" id="padUse">Use drawing</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div>
+          <label>Ink colour</label>
+          <input type="color" id="inkColor" value="#12245c" />
+        </div>
+        <div>
+          <label>Pen width — <span class="val" id="penVal">3</span></label>
+          <input type="range" id="penWidth" min="1" max="8" value="3" />
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-body" id="typeTab">
+      <label>Your name</label>
+      <input type="text" id="typeText" placeholder="e.g. Dr. K. Swamy" />
+      <div class="group" style="border-top:0;padding-top:0;margin-top:12px">
+        <label>Handwriting style</label>
+        <select id="typeFont">
+          <option value="Caveat">Caveat — casual hand</option>
+          <option value="Dancing Script">Dancing Script — formal script</option>
+        </select>
+      </div>
+      <button class="btn small blue" id="typeUse" style="width:100%;margin-top:10px">Use typed signature</button>
+    </div>
+
+    <div class="tab-body" id="uploadTab">
+      <div class="notice">Upload a scanned signature. A transparent PNG gives the cleanest result; white backgrounds on a JPG will show as a white box.</div>
+      <button class="btn small" id="sigImageBtn" style="width:100%;margin-top:10px">Choose image (PNG / JPG)</button>
+      <input type="file" id="sigImageInput" accept="image/png,image/jpeg" />
+    </div>
+
+    <div class="sig-preview" id="sigPreview"><div class="none">No signature ready yet.</div></div>
+
+    <div class="group">
+      <label>Signature width — <span class="val" id="sizeVal">28%</span> of page width</label>
+      <input type="range" id="sigSize" min="8" max="70" value="28" />
+    </div>
+
+    <div class="group">
+      <div class="check"><input type="checkbox" id="stampOn" /> <span>Add a line under the signature</span></div>
+      <label>Line text</label>
+      <input type="text" id="stampText" placeholder="Principal, JSS Polytechnic" />
+      <div class="check"><input type="checkbox" id="stampDate" checked /> <span>Append today&rsquo;s date</span></div>
+      <div class="row" style="margin-top:10px">
+        <div>
+          <label>Text size</label>
+          <input type="number" id="stampSize" value="10" min="6" max="28" />
+        </div>
+        <div>
+          <label>Text colour</label>
+          <input type="color" id="stampColor" value="#333333" />
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="check"><input type="checkbox" id="everyPage" /> <span>Repeat placements on every page</span></div>
+      <div class="notice" id="hintBox">
+        Click <strong>Place signature here</strong>, then click the page where it should sit. Drag any placement to fine-tune it, and use the × to remove one.
+      </div>
+    </div>
+
+    <div class="action-stack">
+      <button class="btn primary" id="applyBtn" disabled>Apply &amp; Download PDF</button>
+    </div>
+  </aside>
+</main>
+
+<footer class="footer">
+  Runs locally in your browser. Files are not uploaded by this page itself. The signature is flattened into the page as an image — this is a visual signature, not a cryptographic digital signature.
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs";
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+
+  const { PDFDocument, StandardFonts, rgb, degrees } = PDFLib;
+
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+
+  const state = {
+    bytes:null,
+    name:"document.pdf",
+    doc:null,
+    pageIndex:0,
+    numPages:0,
+    display:{w:0,h:0},
+    signature:null,      // {dataUrl, w, h}
+    placements:[],       // {id, pageIndex, rx, ry, rw}
+    placing:false,
+    nextId:1
+  };
+
+  const stage = $("#stage");
+  const canvas = $("#pageCanvas");
+  const toastEl = $("#toast");
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.style.display = "block";
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(()=> toastEl.style.display="none", 2800);
+  }
+
+  function setProgress(v){
+    const wrap = $("#progressWrap"), bar = $("#progressBar");
+    if(v === null){ wrap.style.display="none"; bar.style.width="0%"; return; }
+    wrap.style.display="block"; bar.style.width=Math.max(0,Math.min(100,v))+"%";
+  }
+
+  /* ---------------- signature sources ---------------- */
+
+  function trimTransparent(srcCanvas){
+    const ctx = srcCanvas.getContext("2d");
+    const {width:w, height:h} = srcCanvas;
+    const data = ctx.getImageData(0,0,w,h).data;
+    let top=h, left=w, right=0, bottom=0, found=false;
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        if(data[(y*w+x)*4+3] > 8){
+          found=true;
+          if(y<top)top=y; if(y>bottom)bottom=y;
+          if(x<left)left=x; if(x>right)right=x;
+        }
+      }
+    }
+    if(!found) return null;
+    const pad = 6;
+    left=Math.max(0,left-pad); top=Math.max(0,top-pad);
+    right=Math.min(w-1,right+pad); bottom=Math.min(h-1,bottom+pad);
+    const out=document.createElement("canvas");
+    out.width=right-left+1; out.height=bottom-top+1;
+    out.getContext("2d").drawImage(srcCanvas,left,top,out.width,out.height,0,0,out.width,out.height);
+    return out;
+  }
+
+  function setSignatureFromCanvas(c){
+    const trimmed = trimTransparent(c) || c;
+    state.signature = {
+      dataUrl: trimmed.toDataURL("image/png"),
+      w: trimmed.width,
+      h: trimmed.height
+    };
+    renderSigPreview();
+    updateStatus();
+  }
+
+  function renderSigPreview(){
+    const box = $("#sigPreview");
+    if(!state.signature){ box.innerHTML = '<div class="none">No signature ready yet.</div>'; return; }
+    box.innerHTML = "";
+    const img = new Image();
+    img.src = state.signature.dataUrl;
+    img.alt = "signature preview";
+    box.appendChild(img);
+  }
+
+  // -- draw pad --
+  const pad = $("#sigPad");
+  const padCtx = pad.getContext("2d");
+  let drawing=false, lastPt=null, padDirty=false;
+
+  function sizePad(){
+    const rect = pad.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const snapshot = padDirty ? pad.toDataURL() : null;
+    pad.width = Math.max(1,Math.floor(rect.width*dpr));
+    pad.height = Math.max(1,Math.floor(rect.height*dpr));
+    padCtx.setTransform(dpr,0,0,dpr,0,0);
+    padCtx.lineCap="round"; padCtx.lineJoin="round";
+    if(snapshot){
+      const img=new Image();
+      img.onload=()=>padCtx.drawImage(img,0,0,rect.width,rect.height);
+      img.src=snapshot;
+    }
+  }
+  window.addEventListener("resize",sizePad);
+
+  function padPoint(e){
+    const r = pad.getBoundingClientRect();
+    return {x:e.clientX-r.left, y:e.clientY-r.top};
+  }
+  pad.addEventListener("pointerdown",e=>{
+    drawing=true; padDirty=true; pad.setPointerCapture(e.pointerId); lastPt=padPoint(e);
+    padCtx.strokeStyle=$("#inkColor").value;
+    padCtx.lineWidth=Number($("#penWidth").value)||3;
+    padCtx.beginPath(); padCtx.moveTo(lastPt.x,lastPt.y); padCtx.lineTo(lastPt.x+0.01,lastPt.y); padCtx.stroke();
+  });
+  pad.addEventListener("pointermove",e=>{
+    if(!drawing) return;
+    const p=padPoint(e);
+    padCtx.strokeStyle=$("#inkColor").value;
+    padCtx.lineWidth=Number($("#penWidth").value)||3;
+    padCtx.beginPath(); padCtx.moveTo(lastPt.x,lastPt.y); padCtx.lineTo(p.x,p.y); padCtx.stroke();
+    lastPt=p;
+  });
+  ["pointerup","pointercancel","pointerleave"].forEach(ev=>pad.addEventListener(ev,()=>{drawing=false;}));
+
+  $("#padClear").addEventListener("click",()=>{
+    padCtx.clearRect(0,0,pad.width,pad.height); padDirty=false;
+  });
+  $("#padUse").addEventListener("click",()=>{
+    if(!padDirty) return toast("Draw your signature on the pad first.");
+    setSignatureFromCanvas(pad);
+    toast("Signature captured from the pad.");
+  });
+  $("#penWidth").addEventListener("input",e=>$("#penVal").textContent=e.target.value);
+
+  // -- typed --
+  $("#typeUse").addEventListener("click",async()=>{
+    const text = $("#typeText").value.trim();
+    if(!text) return toast("Type your name first.");
+    const family = $("#typeFont").value;
+    const size = 96;
+    try{ await document.fonts.load(`600 ${size}px "${family}"`); }catch(e){ /* fall back to default face */ }
+    const measure=document.createElement("canvas").getContext("2d");
+    measure.font = `600 ${size}px "${family}", cursive`;
+    const w = Math.ceil(measure.measureText(text).width)+60;
+    const c=document.createElement("canvas");
+    c.width=Math.max(60,w); c.height=Math.ceil(size*1.9);
+    const ctx=c.getContext("2d");
+    ctx.font=`600 ${size}px "${family}", cursive`;
+    ctx.fillStyle=$("#inkColor").value;
+    ctx.textBaseline="middle";
+    ctx.fillText(text,30,c.height/2);
+    setSignatureFromCanvas(c);
+    toast("Typed signature ready.");
+  });
+
+  // -- uploaded --
+  $("#sigImageBtn").addEventListener("click",()=>$("#sigImageInput").click());
+  $("#sigImageInput").addEventListener("change",async e=>{
+    const file=e.target.files[0]; e.target.value="";
+    if(!file) return;
+    const url=await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(file);});
+    const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});
+    const c=document.createElement("canvas");
+    c.width=img.naturalWidth; c.height=img.naturalHeight;
+    c.getContext("2d").drawImage(img,0,0);
+    setSignatureFromCanvas(c);
+    toast("Signature image loaded.");
+  });
+
+  $$("#sigTabs button").forEach(b=>b.addEventListener("click",()=>{
+    $$("#sigTabs button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    $$(".tab-body").forEach(s=>s.classList.remove("active"));
+    $("#"+b.dataset.tab+"Tab").classList.add("active");
+    if(b.dataset.tab==="draw") sizePad();
+  }));
+
+  /* ---------------- document + page rendering ---------------- */
+
+  async function loadPdf(file){
+    try{
+      setProgress(10);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      state.bytes = bytes;
+      state.name = file.name;
+      state.doc = await pdfjsLib.getDocument({data:bytes.slice()}).promise;
+      state.numPages = state.doc.numPages;
+      state.pageIndex = 0;
+      state.placements = [];
+      $("#viewer").classList.add("on");
+      $("#dropzone").style.display = "none";
+      await renderPage();
+      setProgress(100); setTimeout(()=>setProgress(null),300);
+      toast(`${file.name} loaded — ${state.numPages} page(s).`);
+    }catch(err){
+      console.error(err); setProgress(null);
+      toast("Could not open that PDF. It may be encrypted or damaged.");
+    }
+  }
+
+  async function renderPage(){
+    const page = await state.doc.getPage(state.pageIndex+1);
+    const base = page.getViewport({scale:1});
+    const maxW = Math.min(820, (stage.parentElement.clientWidth || 820) - 8);
+    const scale = maxW / base.width;
+    const viewport = page.getViewport({scale});
+
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    canvas.style.width = Math.floor(viewport.width)+"px";
+    canvas.style.height = Math.floor(viewport.height)+"px";
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,canvas.width,canvas.height);
+    await page.render({canvasContext:ctx,viewport}).promise;
+
+    state.display = {w:canvas.width, h:canvas.height};
+    $("#pageLabel").textContent = `Page ${state.pageIndex+1} of ${state.numPages}`;
+    drawPlacements();
+    updateStatus();
+  }
+
+  function stampLineText(){
+    const parts=[];
+    const t=$("#stampText").value.trim();
+    if(t) parts.push(t);
+    if($("#stampDate").checked){
+      parts.push(new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}));
+    }
+    return parts.join("  ·  ");
+  }
+
+  function drawPlacements(){
+    $$(".place").forEach(el=>el.remove());
+    if(!state.signature) return;
+    const showStamp = $("#stampOn").checked && stampLineText();
+    const ratio = state.signature.h / state.signature.w;
+
+    state.placements
+      .filter(p=>p.pageIndex===state.pageIndex)
+      .forEach(p=>{
+        const el=document.createElement("div");
+        el.className="place";
+        el.dataset.id=p.id;
+        const w = p.rw*state.display.w;
+        el.style.width = w+"px";
+        el.style.height = (w*ratio)+"px";
+        el.style.left = (p.rx*state.display.w)+"px";
+        el.style.top  = (p.ry*state.display.h)+"px";
+        el.innerHTML = `<img src="${state.signature.dataUrl}" alt="" /><button class="del" title="Remove">×</button>`;
+        if(showStamp){
+          const line=document.createElement("div");
+          line.className="stampline";
+          line.textContent=stampLineText();
+          line.style.fontSize=($("#stampSize").value||10)+"px";
+          line.style.color=$("#stampColor").value;
+          el.appendChild(line);
+        }
+        stage.appendChild(el);
+
+        el.querySelector(".del").addEventListener("click",ev=>{
+          ev.stopPropagation();
+          state.placements = state.placements.filter(x=>x.id!==p.id);
+          drawPlacements(); updateStatus();
+        });
+
+        el.addEventListener("pointerdown",ev=>{
+          if(ev.target.closest(".del")) return;
+          ev.preventDefault();
+          el.setPointerCapture(ev.pointerId);
+          el.classList.add("active");
+          const rect = el.getBoundingClientRect();
+          const offX = ev.clientX-rect.left, offY = ev.clientY-rect.top;
+          const stageRect = stage.getBoundingClientRect();
+          const move = mv=>{
+            const x = mv.clientX - stageRect.left - offX;
+            const y = mv.clientY - stageRect.top  - offY;
+            p.rx = Math.min(1, Math.max(-0.02, x/state.display.w));
+            p.ry = Math.min(1, Math.max(-0.02, y/state.display.h));
+            el.style.left=(p.rx*state.display.w)+"px";
+            el.style.top =(p.ry*state.display.h)+"px";
+          };
+          const up = ()=>{
+            el.classList.remove("active");
+            el.removeEventListener("pointermove",move);
+            el.removeEventListener("pointerup",up);
+          };
+          el.addEventListener("pointermove",move);
+          el.addEventListener("pointerup",up);
+        });
+      });
+  }
+
+  stage.addEventListener("click",e=>{
+    if(!state.placing) return;
+    if(e.target.closest(".place")) return;
+    if(!state.signature){ toast("Create a signature first."); return; }
+    const rect = stage.getBoundingClientRect();
+    const rw = (Number($("#sigSize").value)||28)/100;
+    const ratio = state.signature.h / state.signature.w;
+    const w = rw*state.display.w, h = w*ratio;
+    const x = e.clientX - rect.left - w/2;
+    const y = e.clientY - rect.top  - h/2;
+    state.placements.push({
+      id:"pl_"+state.nextId++,
+      pageIndex:state.pageIndex,
+      rx: Math.min(1,Math.max(0, x/state.display.w)),
+      ry: Math.min(1,Math.max(0, y/state.display.h)),
+      rw
+    });
+    state.placing=false;
+    stage.classList.remove("placing");
+    $("#placeBtn").textContent="Place signature here";
+    drawPlacements(); updateStatus();
+  });
+
+  function updateStatus(){
+    const n = state.placements.length;
+    $("#placeInfo").textContent = `${n} signature${n===1?"":"s"} placed`;
+    const ready = !!(state.bytes && state.signature && n);
+    $("#applyBtn").disabled = !ready;
+    $("#applyTopBtn").disabled = !ready;
+    $("#prevBtn").disabled = state.pageIndex<=0;
+    $("#nextBtn").disabled = state.pageIndex>=state.numPages-1;
+  }
+
+  /* ---------------- export ---------------- */
+
+  // Map a rectangle given in *displayed* page space (origin top-left) to pdf-lib
+  // user space, accounting for the page's /Rotate value.
+  function mapRect(W,H,R,dx,dy,dw,dh){
+    const r=((R%360)+360)%360;
+    if(r===90)  return {x:dy+dh,        y:dx,       angle:90};
+    if(r===180) return {x:W-dx,         y:dy+dh,    angle:180};
+    if(r===270) return {x:W-dy-dh,      y:H-dx,     angle:270};
+    return {x:dx, y:H-dy-dh, angle:0};
+  }
+
+  function hexToRgb(hex){
+    const n=parseInt(String(hex).replace("#",""),16);
+    return rgb(((n>>16)&255)/255, ((n>>8)&255)/255, (n&255)/255);
+  }
+
+  async function applyAndDownload(){
+    if(!state.bytes || !state.signature || !state.placements.length) return;
+    try{
+      setProgress(6);
+      const pdf = await PDFDocument.load(state.bytes, {ignoreEncryption:true});
+      const pngBytes = await (await fetch(state.signature.dataUrl)).arrayBuffer();
+      const png = await pdf.embedPng(pngBytes);
+      const ratio = state.signature.h / state.signature.w;
+
+      const stampText = $("#stampOn").checked ? stampLineText() : "";
+      const stampSize = Number($("#stampSize").value)||10;
+      const stampColor = hexToRgb($("#stampColor").value);
+      const font = stampText ? await pdf.embedFont(StandardFonts.Helvetica) : null;
+
+      const pages = pdf.getPages();
+      const everyPage = $("#everyPage").checked;
+      setProgress(25);
+
+      pages.forEach((page,pageIdx)=>{
+        const {width:W, height:H} = page.getSize();
+        const R = page.getRotation().angle || 0;
+        const rotated = (((R%360)+360)%360) % 180 !== 0;
+        const Dw = rotated ? H : W;
+        const Dh = rotated ? W : H;
+
+        const items = state.placements.filter(p => everyPage || p.pageIndex===pageIdx);
+        items.forEach(p=>{
+          const dw = p.rw*Dw;
+          const dh = dw*ratio;
+          const dx = p.rx*Dw;
+          const dy = p.ry*Dh;
+
+          const at = mapRect(W,H,R,dx,dy,dw,dh);
+          page.drawImage(png,{x:at.x, y:at.y, width:dw, height:dh, rotate:degrees(at.angle)});
+
+          if(stampText){
+            const tw = font.widthOfTextAtSize(stampText, stampSize);
+            const tAt = mapRect(W,H,R, dx, dy+dh+stampSize*0.35, tw, stampSize);
+            page.drawText(stampText,{
+              x:tAt.x, y:tAt.y, size:stampSize, font,
+              color:stampColor, rotate:degrees(tAt.angle)
+            });
+          }
+        });
+      });
+
+      setProgress(80);
+      const out = await pdf.save({useObjectStreams:true});
+      setProgress(100); setTimeout(()=>setProgress(null),350);
+
+      const blob=new Blob([out],{type:"application/pdf"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url; a.download=state.name.replace(/\.pdf$/i,"")+"-signed.pdf";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
+      toast("Signed PDF downloaded.");
+    }catch(err){
+      console.error(err); setProgress(null);
+      toast("Could not stamp the PDF. It may be encrypted or use an unsupported structure.");
+    }
+  }
+
+  /* ---------------- wiring ---------------- */
+
+  const fileInput = $("#fileInput");
+  const dropzone = $("#dropzone");
+  $("#chooseBtn").addEventListener("click",()=>fileInput.click());
+  fileInput.addEventListener("change",()=>{ if(fileInput.files[0]) loadPdf(fileInput.files[0]); fileInput.value=""; });
+  ["dragenter","dragover"].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.add("dragover")}));
+  ["dragleave","drop"].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.remove("dragover")}));
+  dropzone.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f) loadPdf(f); });
+
+  $("#prevBtn").addEventListener("click",async()=>{ if(state.pageIndex>0){ state.pageIndex--; await renderPage(); }});
+  $("#nextBtn").addEventListener("click",async()=>{ if(state.pageIndex<state.numPages-1){ state.pageIndex++; await renderPage(); }});
+  $("#placeBtn").addEventListener("click",()=>{
+    if(!state.signature) return toast("Create a signature first — draw, type or upload one.");
+    state.placing=!state.placing;
+    stage.classList.toggle("placing",state.placing);
+    $("#placeBtn").textContent = state.placing ? "Click the page…" : "Place signature here";
+  });
+  $("#clearPlacementsBtn").addEventListener("click",()=>{
+    state.placements=[]; drawPlacements(); updateStatus();
+  });
+  $("#sigSize").addEventListener("input",e=>{
+    $("#sizeVal").textContent=e.target.value+"%";
+    const rw=Number(e.target.value)/100;
+    state.placements.forEach(p=>p.rw=rw);
+    drawPlacements();
+  });
+  ["stampOn","stampText","stampDate","stampSize","stampColor"].forEach(id=>{
+    $("#"+id).addEventListener("input",drawPlacements);
+    $("#"+id).addEventListener("change",drawPlacements);
+  });
+  $("#applyBtn").addEventListener("click",applyAndDownload);
+  $("#applyTopBtn").addEventListener("click",applyAndDownload);
+  $("#clearBtn").addEventListener("click",()=>{
+    state.bytes=null; state.doc=null; state.placements=[]; state.numPages=0; state.pageIndex=0;
+    $$(".place").forEach(el=>el.remove());
+    $("#viewer").classList.remove("on");
+    $("#dropzone").style.display = "grid";
+    updateStatus();
+    toast("Workspace cleared.");
+  });
+
+  window.addEventListener("resize",()=>{ if(state.doc) renderPage(); });
+
+  sizePad();
+  updateStatus();
+</script>
+</body>
+</html>
