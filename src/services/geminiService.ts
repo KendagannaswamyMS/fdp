@@ -536,11 +536,129 @@ function parseNumberedItems(text: string): string[] {
   return items;
 }
 
+const BLANK = '__________';
+const TOKEN_RE = /\{\{\s*([A-Za-z0-9_]+)\s*\}\}(%?)/g;
+
+/**
+ * "METRIC_3" -> "Metric 3", "CAYm1_VALUE_2" -> "CAYm1 value 2". Used when the document never
+ * says what the token is for. Mixed-case segments are accreditation acronyms (CAY, CAYm1) and
+ * are left exactly as written; plain uppercase words are ordinary prose in shouting case.
+ */
+function humaniseToken(token: string): string {
+  const words = token
+    .split('_')
+    .filter(Boolean)
+    .map(seg => (/[a-z]/.test(seg) ? seg : seg.toLowerCase()));
+  const spaced = words.join(' ').replace(/\s+/g, ' ').trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/** Words a caption must never end on - clipping mid-phrase reads as a truncation bug. */
+const DANGLING = /\s+(?:of|the|a|an|in|on|for|to|at|by|per|and|or|with|from|during|across|into|as|its|their|figure|value)$/i;
+
+/** Turns a full requirement sentence into a caption short enough to sit inside a sentence. */
+function blankLabel(description: string): string {
+  let label = (description || '').replace(/\s+/g, ' ').trim();
+  // Cut at the first parenthetical or sentence end. This runs BEFORE the "No." rewrite below,
+  // so the abbreviation's own full stop can never be mistaken for the end of the sentence.
+  label = label.split(/[(;]/)[0].split(/\.\s|\.$/)[0].trim();
+  label = label.replace(/[:\-–—,]\s*$/, '').replace(/^the\s+/i, '');
+  // Drop the boilerplate tail that every accreditation requirement carries.
+  label = label.replace(/\s+(?:during|within|throughout|as per|under|active during)\b.*$/i, '');
+  label = label
+    .replace(/^total count of\s+/i, 'No. of ')
+    .replace(/^total number of\s+/i, 'No. of ')
+    .replace(/^verified count of\s+/i, 'No. of ')
+    .replace(/^exact count of\s+/i, 'No. of ')
+    .replace(/^count of\s+/i, 'No. of ');
+  if (label.length > 46) {
+    const words = label.split(' ');
+    let out = '';
+    for (const w of words) {
+      if ((out + ' ' + w).trim().length > 46) break;
+      out = (out + ' ' + w).trim();
+    }
+    label = out || label.slice(0, 46);
+  }
+  let previous = '';
+  while (previous !== label) {
+    previous = label;
+    label = label.replace(DANGLING, '').replace(/[\/,]$/, '').trim();
+  }
+  return label;
+}
+
+/** "students" and "Student" collapse to the same stem, so a caption is not repeated. */
+function stemWord(word: string): string {
+  return (word || '').toLowerCase().replace(/[^a-z]/g, '').replace(/(?:es|s)$/, '');
+}
+
+/**
+ * Replaces machine placeholders ({{METRIC_1}}, {{COUNT_OF_STUDENTS}}, {{CAYm1_VALUE_2}}) with
+ * captioned fill-in blanks, so a printed accreditation document reads as a form to complete
+ * rather than a broken mail merge. Applied to BOTH the offline generator and the Gemini reply,
+ * since the prompt template itself instructs the model to emit {{METRIC}} tokens.
+ *
+ * A token is captioned from its own definition line elsewhere in the document
+ * ("{{METRIC_3}}: Total count of workshops conducted") or from a checklist table row.
+ */
+export function renderFillInBlanks(raw: string): string {
+  if (!raw || !raw.includes('{{')) return raw;
+
+  const lines = raw.split('\n');
+  const captions = new Map<string, string>();
+
+  // Pass 1 - harvest captions. Definition lines always follow the narrative that uses the token,
+  // so every caption must be known before any inline replacement happens.
+  const DEFINITION_RE = /^\s*(?:[-•*\d.)\]\[\s]*)\{\{\s*([A-Za-z0-9_]+)\s*\}\}\s*[:\-–—]\s*(.+)$/;
+  const TABLE_ROW_RE = /^\s*\|\s*\{\{\s*([A-Za-z0-9_]+)\s*\}\}\s*\|\s*([^|]+)\|/;
+  for (const line of lines) {
+    const def = line.match(DEFINITION_RE) || line.match(TABLE_ROW_RE);
+    if (def && !captions.has(def[1])) {
+      const caption = blankLabel(def[2]);
+      if (caption) captions.set(def[1], caption);
+    }
+  }
+
+  // Pass 2 - rewrite. On a definition line the caption is already spelled out in full, so the
+  // token becomes a bare blank; everywhere else it becomes a blank carrying its caption.
+  return lines
+    .map(line => {
+      // Inside a table the column header already supplies the context, so a caption in the cell
+      // would only repeat it - the blank goes in bare.
+      const isTableRow = /^\s*\|.*\|/.test(line);
+      if (isTableRow) return line.replace(TOKEN_RE, `${BLANK}$2`);
+
+      const isDefinition = DEFINITION_RE.test(line) || TABLE_ROW_RE.test(line);
+      if (isDefinition) {
+        return line
+          .replace(/^(\s*)\[\s*\]/, '$1[ ]')
+          .replace(/\{\{\s*[A-Za-z0-9_]+\s*\}\}(%?)\s*[:\-–—]\s*/, `${BLANK}$1  `)
+          .replace(TOKEN_RE, `${BLANK}$2`);
+      }
+      return line.replace(TOKEN_RE, (match, token: string, pct: string, offset: number) => {
+        const caption = captions.get(token) || humaniseToken(token);
+        // "{{COUNT}} students" already names the thing - a caption there just repeats the noun.
+        const nextWord = line.slice(offset + match.length).trim().split(/\s+/)[0] || '';
+        const captionTail = caption.split(/\s+/).pop() || '';
+        if (stemWord(nextWord) && stemWord(nextWord) === stemWord(captionTail)) {
+          return `${BLANK}${pct}`;
+        }
+        return `${BLANK}${pct} (${caption})`;
+      });
+    })
+    .join('\n');
+}
+
 /**
  * Dynamic, 100% responsive document generator for all 15 prompts
  * Reflects EVERY user-added item, number change, and customized note
  */
 export function generateInstitutionalSimulation(inputContext: string, promptNumber: number = 1): string {
+  return renderFillInBlanks(buildInstitutionalSimulation(inputContext, promptNumber));
+}
+
+function buildInstitutionalSimulation(inputContext: string, promptNumber: number = 1): string {
   const text = stripPromptWrapper(inputContext || '');
   const institution = extractValue(text, ['Institution', 'College'], 'JSS Polytechnic, Mysuru');
   const department = extractValue(text, ['Department', 'Dept'], 'Department of Computer Science & Engineering');
@@ -1333,7 +1451,7 @@ AUDIT VERDICT: ${verdict}
         const token = `{{METRIC_${counter}}}`;
         const following = revised.slice(offset + match.length, offset + match.length + 40).split(/[\s,.]+/).filter(Boolean);
         const noun = following.find(w => w.length > 3) || 'item';
-        addChecklist(token, `Exact count replacing the vague quantifier "${match.trim()}" (${noun})`, sourceFor(noun));
+        addChecklist(token, `Count of ${noun} (exact count replacing the vague quantifier "${match.trim()}")`, sourceFor(noun));
         return `${token} `;
       });
 
@@ -1343,7 +1461,7 @@ AUDIT VERDICT: ${verdict}
         const before = revised.slice(Math.max(0, offset - 30), offset);
         if (/\d\s*\S*\s*$/.test(before) || /\}\}\s*\S*\s*$/.test(before)) return match;
         const token = `{{COUNT_OF_${match.toUpperCase().replace(/[^A-Z]/g, '')}}}`;
-        addChecklist(token, `Verified count of ${match.toLowerCase()}`, sourceFor(match));
+        addChecklist(token, `Count of ${match.toLowerCase()} (verified count)`, sourceFor(match));
         return `${token} ${match}`;
       });
 
@@ -1372,7 +1490,7 @@ ADJECTIVES PURGED (${removedAdjectives.length}):
 ${purgedLine}
 
 CHECKLIST OF METRIC VALUES TO BE INSERTED (${checklist.length}):
-| Placeholder Identifier | Required Parameter | Source File / Register |
+| Value to be Entered | Required Parameter | Source File / Register |
 |---|---|---|
 ${checklistRows}
 
@@ -1661,7 +1779,7 @@ AUDIT VERDICT: ${verdict}
     }
 
     default:
-      return generateInstitutionalSimulation(inputContext, 1);
+      return buildInstitutionalSimulation(inputContext, 1);
   }
 }
 
@@ -1752,7 +1870,7 @@ export async function generateWithGemini(options: GeminiGenerateOptions): Promis
         .join('\n');
 
       if (generatedText) {
-        return generatedText;
+        return renderFillInBlanks(generatedText);
       }
 
       if (data?.promptFeedback?.blockReason) {
