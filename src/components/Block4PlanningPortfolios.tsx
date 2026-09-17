@@ -58,13 +58,13 @@ export const Block4PlanningPortfolios: React.FC<{ appMode: AppMode }> = ({ appMo
       {activeTab === 'course_file' && (
         <div className="space-y-4">
           <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs sm:text-sm">
-            <strong className="font-bold text-amber-300">Auditor Insight:</strong> In 90% of NBA and NAAC peer team visits, items 1–5 and 7–11 are present. <strong>Audits fail almost exclusively on items 6, 12, 16, and 17</strong> (CO-PO justification, question paper CO tagging, mathematical CO attainment, and DAC gap analysis).
+            <strong className="font-bold text-amber-300">Where course files usually fall short:</strong> items 6, 12, 16 and 17 — CO–PO justification, CO and Bloom’s tagging of CIE questions, the attainment calculation, and gap analysis with corrective action. Use this checklist for a quick self-check, then run <strong>Lab 4: Course File Builder</strong> for the full review.
           </div>
 
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-white flex items-center space-x-2">
               <CheckSquare className="w-4 h-4 text-sky-400" />
-              <span>Standard 18-Item Course File Checklist</span>
+              <span>18-Item Course File Checklist (Lab 4 structure)</span>
             </h2>
             <span className="text-xs text-slate-400 font-mono">
               Completed: {completedCourseFileItems} / 18
@@ -96,7 +96,7 @@ export const Block4PlanningPortfolios: React.FC<{ appMode: AppMode }> = ({ appMo
                     </div>
                     {item.isCriticalAuditFailure && (
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 uppercase tracking-wider whitespace-nowrap">
-                        Audit Red Line
+                        Review Focus
                       </span>
                     )}
                   </div>

@@ -5,149 +5,149 @@ export const COURSE_FILE_ITEMS: CourseFileItem[] = [
     id: 1,
     itemNo: 1,
     title: 'Cover Page',
-    description: 'Course Code, Course Title, Semester, Branch, Academic Year, Faculty Name, Designation, and Department.',
+    description: 'Course title and code, programme and semester, academic year, faculty name and designation, and department, in the institutional format.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'Institutional standard cover template'
+    mandatoryAnnexures: 'Cover page in the institutional format'
   },
   {
     id: 2,
     itemNo: 2,
     title: 'Contents Index with Page Numbers',
-    description: 'Neatly organized table of contents referencing exact page numbers for every section in the binder/digital dossier.',
+    description: 'Index of every section. Insert page numbers only after the file is finally assembled; until then write “To be generated after final assembly”.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'Table of Contents'
+    mandatoryAnnexures: 'Contents index generated after final pagination'
   },
   {
     id: 3,
     itemNo: 3,
     title: 'Vision & Mission Statements',
-    description: 'Approved Institutional Vision/Mission and Department Vision/Mission statements.',
+    description: 'Approved institute and department vision and mission statements, reproduced exactly as approved.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'Approved institutional copy'
+    mandatoryAnnexures: 'Approved copy of the statements'
   },
   {
     id: 4,
     itemNo: 4,
     title: 'Programme Outcomes (POs) & PSOs',
-    description: 'NBA 12/10 Graduate Attributes (POs) and Program Specific Outcomes (PSOs) defined by the department.',
+    description: 'The Programme Outcomes and Programme Specific Outcomes approved for your programme, preserved word for word.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'DTE / NBA curriculum document'
+    mandatoryAnnexures: 'Approved PO/PSO document'
   },
   {
     id: 5,
     itemNo: 5,
-    title: 'Course Outcomes (COs) with Bloom Taxonomy Levels',
-    description: '5–6 measurable Course Outcomes using Bloom\'s action verbs (Understand, Apply, Analyze, Design).',
+    title: 'Course Outcomes (COs) with Bloom’s Levels',
+    description: 'The approved Course Outcomes, each with its Bloom’s taxonomy level, numbered consistently across the whole file.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'Board-approved syllabus extract'
+    mandatoryAnnexures: 'Approved syllabus or CO statement'
   },
   {
     id: 6,
     itemNo: 6,
-    title: 'CO–PO / PSO Mapping Matrix WITH JUSTIFICATION',
-    description: 'Matrix showing correlation levels (1: Slight, 2: Moderate, 3: Substantial) along with a written justification sentence for each cell marked >0.',
+    title: 'CO–PO / PSO Mapping WITH JUSTIFICATION',
+    description: 'Mapping of each CO to POs/PSOs using the institution’s own mapping scale and definitions, with an academic justification and the supporting learning activity or assessment for every mapped cell.',
     isCriticalAuditFailure: true,
-    auditFailureReason: 'CRITICAL AUDIT TRAP: Faculty routinely fill 1, 2, 3 in the grid but omit the justification column. Assessors reject unjustified mapping numbers!',
-    mandatoryAnnexures: 'Justification Table with specific syllabus topic citations'
+    auditFailureReason: 'Common gap: levels filled in without a justification, justifications as generic as “strongly related”, or no stated scale and approval. Don’t assume a numeric scale; use the approved one.',
+    mandatoryAnnexures: 'Mapping table with scale definitions, justification and approval record'
   },
   {
     id: 7,
     itemNo: 7,
     title: 'Approved Syllabus Copy',
-    description: 'Official Board of Technical Examinations (BTE) / University approved curriculum document with credit breakdown.',
+    description: 'The approved syllabus for the stated regulation/scheme version, with credits and contact hours.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'BTE Scheme & Syllabus'
+    mandatoryAnnexures: 'Syllabus copy matching the stated regulation version'
   },
   {
     id: 8,
     itemNo: 8,
-    title: 'Session-Wise Lecture / Lesson Plan',
-    description: 'Planned delivery schedule detailing session number, specific topic, mapped CO, teaching aid/pedagogy, and reference text.',
+    title: 'Session-Wise Lesson Plan',
+    description: 'Planned sessions with topic, mapped CO, teaching method and reference, with planned hours that match the syllabus.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'Lesson plan endorsed by HoD before term commencement'
+    mandatoryAnnexures: 'Lesson plan approved as per institutional practice'
   },
   {
     id: 9,
     itemNo: 9,
     title: 'Actual Delivery Log & Deviation Record',
-    description: 'Date-wise record of actual classes conducted against the planned dates, with documented reasons for deviations or compensatory classes.',
+    description: 'Dated record of classes actually conducted, kept separate from the lesson plan, with each deviation and its recovery action.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'Teacher\'s work diary / ERP delivery report'
+    mandatoryAnnexures: 'Work diary or ERP delivery report'
   },
   {
     id: 10,
     itemNo: 10,
     title: 'Teaching–Learning Material (TLM)',
-    description: 'Curated lecture notes, presentation slides, active learning worksheets, video lecture links, and recommended open educational resources.',
+    description: 'Notes, slides, worksheets, video links and open resources used, referenced to the sessions they support.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'Sample PPTs, handouts, LMS course page printout'
+    mandatoryAnnexures: 'TLM list or sample copies'
   },
   {
     id: 11,
     itemNo: 11,
     title: 'Assignment & Tutorial Sheets with Rubrics',
-    description: 'Graded assignments mapped to higher Bloom levels with explicit evaluation rubrics shared with students in advance.',
+    description: 'Assignment and tutorial sheets with their evaluation rubrics, tagged to the COs they assess.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'Question sheets, answer keys, scoring rubrics'
+    mandatoryAnnexures: 'Question sheets and rubrics'
   },
   {
     id: 12,
     itemNo: 12,
-    title: 'CIE Question Papers WITH CO & BLOOM TAGGING',
-    description: 'All Continuous Internal Evaluation (CIE) test question papers featuring explicit CO and Bloom level tags on every single sub-question, accompanied by Scheme of Evaluation.',
+    title: 'CIE Papers WITH CO & BLOOM TAGGING',
+    description: 'Every CIE paper with a CO and Bloom’s level on each question or sub-question, marks that reconcile with the declared total, and a clear rule for optional questions.',
     isCriticalAuditFailure: true,
-    auditFailureReason: 'CRITICAL AUDIT TRAP: Tests missing CO tags on individual questions or lacking an approved Scheme of Valuation cannot be used for direct CO attainment calculation!',
-    mandatoryAnnexures: 'Approved question papers, Bloom matrix, Scheme of Evaluation with step marks'
+    auditFailureReason: 'Common gap: questions without CO tags, Bloom’s levels judged from the opening verb rather than the task, totals that don’t reconcile, or COs no question assesses. Untagged papers can’t support a CO attainment calculation.',
+    mandatoryAnnexures: 'Tagged question papers and scheme of evaluation'
   },
   {
     id: 13,
     itemNo: 13,
-    title: 'Sample Evaluated Answer Scripts (Best, Average, Weak)',
-    description: 'Three representative evaluated answer scripts from each CIE test (1 highest scorer, 1 average scorer, 1 threshold/weak student) with rubric markings.',
+    title: 'Sample Evaluated Scripts (High, Middle, Low)',
+    description: 'Evaluated scripts representing high, middle and low performance, chosen by the institution’s selection method and linked to the assessment they belong to.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'Original scripts with student signatures and moderation marks'
+    mandatoryAnnexures: 'Sample scripts (anonymised in summaries) and the selection method'
   },
   {
     id: 14,
     itemNo: 14,
     title: 'Consolidated CIE & SEE Marks Ledger',
-    description: 'Tabulated marks of all students for all internal tests, assignments, practical continuous evaluation, and final Semester End Examination (SEE) results.',
+    description: 'Verified marks for all CIE components and the Semester-End Examination, reconciling with the individual assessments.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'ERP verified mark sheets'
+    mandatoryAnnexures: 'Verified marks ledger'
   },
   {
     id: 15,
     itemNo: 15,
     title: 'Attendance Ledger with Consolidations',
-    description: 'Class-wise student attendance register with periodic consolidations (at 30, 60, 90 working days) and student shortage notices.',
+    description: 'Attendance register with consolidations at the points your institution prescribes, stating the sessions conducted and the denominator used.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'ERP attendance report signed by Faculty and HoD'
+    mandatoryAnnexures: 'Attendance report as per institutional format'
   },
   {
     id: 16,
     itemNo: 16,
     title: 'Direct & Indirect CO Attainment Calculation',
-    description: 'Mathematical calculation of CO attainment against pre-set target levels (e.g. 60% students scoring ≥60% marks in internal and external exams), weighted 80% Direct + 20% Indirect (Course End Survey).',
+    description: 'CO attainment calculated with the approved method: question-level data, stated thresholds, targets, component weights, absence and rounding rules, and CO-aligned survey items for indirect assessment.',
     isCriticalAuditFailure: true,
-    auditFailureReason: 'CRITICAL AUDIT TRAP: Arbitrary attainment calculations without defined threshold benchmarks or formula breakdowns are immediately disqualified by NBA evaluation teams.',
-    mandatoryAnnexures: 'Spreadsheet formula sheet, attainment summary table'
+    auditFailureReason: 'Common gap: attainment inferred from pass percentage, or thresholds and weights that aren’t written down. Use only the approved method; if data are missing, list the missing inputs instead of a number.',
+    mandatoryAnnexures: 'Calculation sheet showing formula, numerator and denominator'
   },
   {
     id: 17,
     itemNo: 17,
-    title: 'CO–PO Gap Analysis & Corrective Action Plan',
-    description: 'Identification of Course Outcomes that failed to attain targets, root cause analysis (curriculum gap / pedagogical bottleneck), and specific corrective actions scheduled for the next academic cycle.',
+    title: 'CO–PO Gap Analysis & Corrective Action',
+    description: 'Verified attainment compared with approved targets, with evidence-supported causes (or clearly labelled hypotheses), corrective actions, owners, deadlines and follow-up measures.',
     isCriticalAuditFailure: true,
-    auditFailureReason: 'CRITICAL AUDIT TRAP: If attainment falls short and no gap analysis or corrective action is documented, the continuous improvement cycle (NBA Criterion 3 & 7) is marked non-compliant.',
-    mandatoryAnnexures: 'Action Taken Report endorsed by Department Academic Committee (DAC)'
+    auditFailureReason: 'Common gap: shortfalls with no action, causes stated as fact without evidence, or improvement claimed before follow-up data exist. Don’t derive programme-level PO attainment from one course.',
+    mandatoryAnnexures: 'Gap analysis and action record as per institutional practice'
   },
   {
     id: 18,
     itemNo: 18,
     title: 'Course-End Feedback Survey & Analysis',
-    description: 'Anonymous student feedback on course outcome delivery, analyzed statistically with response percentage and mean rating.',
+    description: 'Survey instrument and analysis stating the response count and the number of eligible students. General satisfaction ratings are not CO attainment unless the approved method says so.',
     isCriticalAuditFailure: false,
-    mandatoryAnnexures: 'Feedback questionnaire, Google Forms / ERP analysis charts'
+    mandatoryAnnexures: 'Questionnaire and analysis with response count'
   }
 ];
 
