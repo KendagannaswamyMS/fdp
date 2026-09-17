@@ -14,7 +14,7 @@ no server-side data storage.
 | B1 | Official correspondence — circulars, notices, office orders |
 | B2 | Meeting governance — rough notes to MoM, ATR registers |
 | B3 | Reporting & compliance — 9-part event reports, NBA/NAAC criteria mapping |
-| B4 | Planning & portfolios — term calendars, working-day arithmetic, PBAS/CAS |
+| B4 | Planning & portfolios — Lab 4 course-file builder, academic calendar builder, PBAS/CAS dossier builder |
 | B5 | Digital administration, security & the **15-prompt AI Studio** |
 | — | Faculty Profile Generator, Drafting Kit & Statutory Templates |
 

@@ -5,30 +5,19 @@ import {
   CALENDAR_BACKWARDS_STEPS, 
   PBAS_DOSSIER_SECTIONS 
 } from '../data/academicPlanningData';
-import { 
-  Calendar, 
-  CheckSquare, 
-  AlertTriangle, 
-  FileSpreadsheet, 
-  GraduationCap, 
-  Layers, 
-  ShieldAlert, 
-  Sparkles, 
-  Search,
-  CheckCircle2
+import { CourseFileBuilder } from './CourseFileBuilder';
+import { CalendarBuilder } from './CalendarBuilder';
+import { PbasDossierBuilder } from './PbasDossierBuilder';
+import {
+  Calendar,
+  CheckSquare,
+  GraduationCap,
+  FlaskConical
 } from 'lucide-react';
 
 export const Block4PlanningPortfolios: React.FC<{ appMode: AppMode }> = ({ appMode }) => {
-  const [activeTab, setActiveTab] = useState<'calendar' | 'course_file' | 'pbas'>('course_file');
+  const [activeTab, setActiveTab] = useState<'lab4' | 'calendar' | 'course_file' | 'pbas'>('lab4');
   const [courseFileChecks, setCourseFileChecks] = useState<Record<number, boolean>>({});
-
-  const [totalCalendarDays, setTotalCalendarDays] = useState(122);
-  const [sundaysAndHolidays, setSundaysAndHolidays] = useState(25);
-  const [bufferDays, setBufferDays] = useState(6);
-  const [cieDays, setCieDays] = useState(6);
-
-  const availableInstructionalDays = totalCalendarDays - sundaysAndHolidays - bufferDays - cieDays;
-  const isCalendarCompliant = availableInstructionalDays >= 80;
 
   const completedCourseFileItems = Object.values(courseFileChecks).filter(Boolean).length;
 
@@ -49,17 +38,22 @@ export const Block4PlanningPortfolios: React.FC<{ appMode: AppMode }> = ({ appMo
         </p>
 
         <div className="flex items-center space-x-2 mt-5 border-t border-slate-800/80 pt-4 overflow-x-auto">
+          <button onClick={() => setActiveTab('lab4')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all whitespace-nowrap ${activeTab === 'lab4' ? 'bg-rose-500 text-white shadow-md' : 'bg-slate-800 text-slate-300 hover:text-white'}`}>
+            <FlaskConical className="w-3.5 h-3.5" /><span>Lab 4: Course File Builder</span>
+          </button>
           <button onClick={() => setActiveTab('course_file')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${activeTab === 'course_file' ? 'bg-sky-500 text-slate-950 font-bold shadow-md' : 'bg-slate-800 text-slate-300 hover:text-white'}`}>
             <CheckSquare className="w-3.5 h-3.5" /><span>18-Item Course File Matrix (Audit Critical)</span>
           </button>
-          <button onClick={() => setActiveTab('calendar')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${activeTab === 'calendar' ? 'bg-brand-600 text-white shadow-md' : 'bg-slate-800 text-slate-300 hover:text-white'}`}>
+          <button onClick={() => setActiveTab('calendar')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${activeTab === 'calendar' ? 'bg-sky-500 text-slate-950 font-bold shadow-md' : 'bg-slate-800 text-slate-300 hover:text-white'}`}>
             <Calendar className="w-3.5 h-3.5" /><span>Academic Calendar Backwards Engine</span>
           </button>
-          <button onClick={() => setActiveTab('pbas')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${activeTab === 'pbas' ? 'bg-brand-600 text-white shadow-md' : 'bg-slate-800 text-slate-300 hover:text-white'}`}>
+          <button onClick={() => setActiveTab('pbas')} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${activeTab === 'pbas' ? 'bg-sky-500 text-slate-950 font-bold shadow-md' : 'bg-slate-800 text-slate-300 hover:text-white'}`}>
             <GraduationCap className="w-3.5 h-3.5" /><span>Faculty PBAS / CAS Dossier Structure</span>
           </button>
         </div>
       </div>
+
+      {activeTab === 'lab4' && <CourseFileBuilder />}
 
       {activeTab === 'course_file' && (
         <div className="space-y-4">
@@ -69,7 +63,7 @@ export const Block4PlanningPortfolios: React.FC<{ appMode: AppMode }> = ({ appMo
 
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-white flex items-center space-x-2">
-              <CheckSquare className="w-4 h-4 text-brand-400" />
+              <CheckSquare className="w-4 h-4 text-sky-400" />
               <span>Standard 18-Item Course File Checklist</span>
             </h2>
             <span className="text-xs text-slate-400 font-mono">
@@ -127,7 +121,7 @@ export const Block4PlanningPortfolios: React.FC<{ appMode: AppMode }> = ({ appMo
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {CALENDAR_BACKWARDS_STEPS.map((s) => (
               <div key={s.step} className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
-                <span className="text-xs font-bold text-brand-400 font-mono">Step {s.step}</span>
+                <span className="text-xs font-bold text-sky-400 font-mono">Step {s.step}</span>
                 <h3 className="text-sm font-bold text-white">{s.name}</h3>
                 <p className="text-xs text-slate-300 leading-relaxed pt-1">
                   {s.detail}
@@ -136,68 +130,7 @@ export const Block4PlanningPortfolios: React.FC<{ appMode: AppMode }> = ({ appMo
             ))}
           </div>
 
-          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-xl">
-            <h3 className="text-sm font-bold text-white flex items-center space-x-2">
-              <FileSpreadsheet className="w-4 h-4 text-brand-400" />
-              <span>Interactive Working-Day Arithmetic & Buffer Validator</span>
-            </h3>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-              <div>
-                <label className="block text-slate-400 mb-1">Total Calendar Span (Days)</label>
-                <input
-                  type="number"
-                  value={totalCalendarDays}
-                  onChange={(e) => setTotalCalendarDays(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">Sundays & Declared Holidays</label>
-                <input
-                  type="number"
-                  value={sundaysAndHolidays}
-                  onChange={(e) => setSundaysAndHolidays(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">CIE Assessment Days</label>
-                <input
-                  type="number"
-                  value={cieDays}
-                  onChange={(e) => setCieDays(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-400 mb-1">Emergency Buffer (Min 5-7)</label>
-                <input
-                  type="number"
-                  value={bufferDays}
-                  onChange={(e) => setBufferDays(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200"
-                />
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-xs text-slate-400">Calculated Net Instructional Days:</div>
-                <div className="text-2xl font-bold font-mono text-white">
-                  {availableInstructionalDays} Days
-                  <span className="text-xs text-slate-500 font-normal ml-2">(Statutory Min: 80–90 Days)</span>
-                </div>
-              </div>
-              <div className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase ${
-                isCalendarCompliant && bufferDays >= 5
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                  : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-              }`}>
-                {isCalendarCompliant && bufferDays >= 5 ? '✓ Audit Compliant Calendar' : '⚠️ Non-Compliant / Insufficient Buffer'}
-              </div>
-            </div>
-          </div>
+          <CalendarBuilder />
         </div>
       )}
 
@@ -210,7 +143,7 @@ export const Block4PlanningPortfolios: React.FC<{ appMode: AppMode }> = ({ appMo
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {PBAS_DOSSIER_SECTIONS.map((sec) => (
               <div key={sec.section} className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
-                <span className="text-xs font-bold text-brand-400 font-mono">{sec.section}</span>
+                <span className="text-xs font-bold text-sky-400 font-mono">{sec.section}</span>
                 <h3 className="text-sm font-bold text-white">{sec.title}</h3>
                 <p className="text-xs text-slate-300 leading-relaxed pt-1">
                   {sec.focus}
@@ -218,6 +151,8 @@ export const Block4PlanningPortfolios: React.FC<{ appMode: AppMode }> = ({ appMo
               </div>
             ))}
           </div>
+
+          <PbasDossierBuilder />
         </div>
       )}
     </div>
